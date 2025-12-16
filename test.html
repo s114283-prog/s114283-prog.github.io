@@ -29,9 +29,13 @@ input,select{font-size:14px;padding:6px;border-radius:6px;border:none}
 <!-- 遊戲畫面 -->
 <canvas id="game" width="360" height="400"></canvas>
 
-<!-- 操作提示 -->
-<div id="hints" style="font-size:12px;text-align:center;margin-top:6px">
-  <div>💻 電腦：P1【A D 移動｜W 跳｜F 拳】｜P2【← → 移動｜↑ 跳｜/ 拳】</div>
+<!-- 操作提示（圖示化） -->
+<div id="hints" style="font-size:12px;text-align:center;margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+  <div style="background:#222;padding:6px 10px;border-radius:8px">💻 P1：<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">A</span><span style="border:1px solid #555;border-radius:4px;padding:2px 4px">D</span> 移動｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">W</span> 跳｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">F</span> 👊</div>
+  <div style="background:#222;padding:6px 10px;border-radius:8px">💻 P2：<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">←</span><span style="border:1px solid #555;border-radius:4px;padding:2px 4px">→</span> 移動｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">↑</span> 跳｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">/</span> 👊</div>
+  <div style="background:#222;padding:6px 10px;border-radius:8px">📱 玩家1：◀ ▶ 跳 👊</div>
+  <div style="background:#222;padding:6px 10px;border-radius:8px">📱 玩家2：👊</div>
+</div>
   <div>📱 手機：左側＝玩家1 操作｜右側＝玩家2 出拳</div>
 </div>
 
