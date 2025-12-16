@@ -6,13 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
 <style>
-/* === 全站置中 === */
 html,body{
   margin:0;
   width:100%;
   height:100%;
 }
-
 body{
   display:flex;
   justify-content:center;
@@ -21,8 +19,6 @@ body{
   color:#fff;
   font-family:system-ui;
 }
-
-/* === 遊戲主容器（關鍵） === */
 #app{
   width:360px;
   max-width:100%;
@@ -31,41 +27,31 @@ body{
   align-items:center;
   text-align:center;
 }
-
-/* === 畫布 === */
 canvas{
   background:#f5f5f5;
   border-radius:12px;
   margin:10px 0;
 }
-
-/* === 按鈕 === */
 button{
   padding:10px 14px;
   border-radius:10px;
   border:none;
   font-size:14px;
 }
-
-/* === 選單 & 結束畫面 === */
 .menu,.end{
   display:flex;
   flex-direction:column;
   gap:10px;
   align-items:center;
 }
-
-/* === 手機控制 === */
 #mobileControls{
   display:none;
   width:100%;
   justify-content:space-between;
 }
-
 @media (orientation: landscape){
   #mobileControls{display:flex}
 }
-
 .key{
   border:1px solid #555;
   padding:2px 6px;
@@ -78,126 +64,7 @@ button{
 <body>
 <div id="app">
 
-<!-- === 選單 === -->
 <div id="menu" class="menu">
   <h2>火柴人對決</h2>
   <div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1" value="#000000"></div>
-  <div>玩家2 <input id="n2" value="玩家2"> <input type="color" id="c2" value="#ff0000"></div>
-  <button onclick="start()">開始遊戲</button>
-</div>
-
-<!-- === 遊戲畫面 === -->
-<canvas id="game" width="360" height="400" style="display:none"></canvas>
-
-<!-- === 手機雙人按鈕 === -->
-<div id="mobileControls">
-  <div>
-    <button ontouchstart="m1L=1" ontouchend="m1L=0">◀</button>
-    <button ontouchstart="m1R=1" ontouchend="m1R=0">▶</button>
-    <button ontouchstart="m1J=1" ontouchend="m1J=0">跳</button>
-    <button ontouchstart="m1P=1" ontouchend="m1P=0">👊</button>
-  </div>
-  <div>
-    <button ontouchstart="m2L=1" ontouchend="m2L=0">◀</button>
-    <button ontouchstart="m2R=1" ontouchend="m2R=0">▶</button>
-    <button ontouchstart="m2J=1" ontouchend="m2J=0">跳</button>
-    <button ontouchstart="m2P=1" ontouchend="m2P=0">👊</button>
-  </div>
-</div>
-
-<!-- === 操作說明（只一份） === -->
-<div style="font-size:12px;margin-top:6px">
-  🧍 電腦：P1 <span class="key">A</span><span class="key">D</span><span class="key">W</span><span class="key">F</span>
-  ｜ P2 <span class="key">←</span><span class="key">→</span><span class="key">↑</span><span class="key">/</span><br>
-  📱 手機：左右移動・跳躍・出拳（雙人同機）
-</div>
-
-<!-- === 結束畫面 === -->
-<div id="end" class="end" style="display:none">
-  <h2 id="win"></h2>
-  <button onclick="restart()">再來一場</button>
-  <button onclick="back()">回設定</button>
-</div>
-
-</div>
-
-<script>
-const c=document.getElementById('game'),ctx=c.getContext('2d');
-const ground=300,grav=0.8;
-let key={},m1L=0,m1R=0,m1J=0,m1P=0,m2L=0,m2R=0,m2J=0,m2P=0;
-window.onkeydown=e=>key[e.key]=1;
-window.onkeyup=e=>key[e.key]=0;
-
-function fighter(x,n,col){
-  return{x,y:ground,vy:0,hp:100,name:n,color:col,punch:0,onGround:1}
-}
-let p1,p2,gameOver=0;
-
-function start(){
-  p1=fighter(90,n1.value,c1.value);
-  p2=fighter(270,n2.value,c2.value);
-  menu.style.display='none';
-  c.style.display='block';
-  gameOver=0;
-  loop();
-}
-
-function restart(){
-  p1.hp=p2.hp=100;
-  end.style.display='none';
-  c.style.display='block';
-  gameOver=0;
-  loop();
-}
-
-function back(){
-  end.style.display='none';
-  c.style.display='none';
-  menu.style.display='flex';
-}
-
-function update(p,e,L,R,J,P){
-  if(L)p.x-=3;
-  if(R)p.x+=3;
-  if(J&&p.onGround){p.vy=-12;p.onGround=0}
-  p.vy+=grav;
-  p.y+=p.vy;
-  if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=1}
-  if(P&&!p.punch){
-    p.punch=1;
-    setTimeout(()=>p.punch=0,200);
-    if(Math.abs(p.x-e.x)<40)e.hp-=10;
-  }
-}
-
-function draw(p){
-  ctx.strokeStyle=p.color;
-  ctx.lineWidth=4;
-  ctx.beginPath();
-  ctx.arc(p.x,p.y-50,10,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(p.x,p.y-40);ctx.lineTo(p.x,p.y-10);ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(p.x,p.y-30);
-  ctx.lineTo(p.x+(p.punch?25:15),p.y-25);
-  ctx.stroke();
-}
-
-function loop(){
-  if(gameOver)return;
-  ctx.clearRect(0,0,360,400);
-  update(p1,p2,key.a||m1L,key.d||m1R,key.w||m1J,key.f||m1P);
-  update(p2,p1,key.ArrowLeft||m2L,key.ArrowRight||m2R,key.ArrowUp||m2J,key['/']||m2P);
-  draw(p1);draw(p2);
-  if(p1.hp<=0||p2.hp<=0){
-    gameOver=1;
-    c.style.display='none';
-    end.style.display='flex';
-    win.innerText=(p1.hp<=0?p2.name:p1.name)+' 勝利';
-    return;
-  }
-  requestAnimationFrame(loop);
-}
-</script>
-</body>
-</html>
+  <div>玩家2 <input id="n2" value="玩家2"> <input
