@@ -10,6 +10,13 @@ canvas{background:#f5f5f5;border-radius:12px;display:none}
 .menu,.end{display:flex;flex-direction:column;gap:12px;align-items:center}
 button{font-size:14px;padding:10px 14px;border-radius:10px;border:none}
 input,select{font-size:14px;padding:6px;border-radius:6px;border:none}
+
+/* 手機橫向優化 */
+@media (orientation: landscape){
+  body{flex-direction:row;justify-content:space-around}
+  canvas{width:60vw;height:auto}
+  #mobileControls{flex-direction:row;width:35vw}
+}
 </style>
 </head>
 <body>
@@ -71,16 +78,26 @@ input,select{font-size:14px;padding:6px;border-radius:6px;border:none}
   <div>📱 手機：左側＝玩家1 操作｜右側＝玩家2 出拳</div>
 </div>
 
-<!-- 手機操作按鈕 -->
+<!-- 手機操作按鈕（雙人完整） -->
 <div id="mobileControls" style="display:none;margin-top:8px;width:360px;display:flex;justify-content:space-between">
-  <div>
-    <button ontouchstart="m1L=true" ontouchend="m1L=false">◀</button>
-    <button ontouchstart="m1R=true" ontouchend="m1R=false">▶</button>
+  <!-- 玩家1 左手 -->
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div>
+      <button ontouchstart="m1L=true" ontouchend="m1L=false">◀</button>
+      <button ontouchstart="m1R=true" ontouchend="m1R=false">▶</button>
+    </div>
     <button ontouchstart="m1J=true" ontouchend="m1J=false">跳</button>
-    <button ontouchstart="m1P=true" ontouchend="m1P=false">拳</button>
+    <button ontouchstart="m1P=true" ontouchend="m1P=false">👊</button>
   </div>
-  <div>
-    <button ontouchstart="m2P=true" ontouchend="m2P=false">玩家2 拳</button>
+
+  <!-- 玩家2 右手 -->
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div>
+      <button ontouchstart="m2L=true" ontouchend="m2L=false">◀</button>
+      <button ontouchstart="m2R=true" ontouchend="m2R=false">▶</button>
+    </div>
+    <button ontouchstart="m2J=true" ontouchend="m2J=false">跳</button>
+    <button ontouchstart="m2P=true" ontouchend="m2P=false">👊</button>
   </div>
 </div>
 
@@ -96,7 +113,8 @@ const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const groundY=300,gravity=0.8;
 const key={};window.addEventListener('keydown',e=>key[e.key]=true);window.addEventListener('keyup',e=>key[e.key]=false);
 let p1,p2,gameOver=false;
-let m1L=false,m1R=false,m1J=false,m1P=false,m2P=false;
+let m1L=false,m1R=false,m1J=false,m1P=false;
+let m2L=false,m2R=false,m2J=false,m2P=false;
 
 function createFighter(x,name,color){return{x,y:groundY,vy:0,hp:100,onGround:true,punch:false,name,color}}
 
@@ -148,7 +166,7 @@ function loop(){
  if(gameOver) return;
  ctx.clearRect(0,0,canvas.width,canvas.height);
  update(p1,p2,{L:key.a||m1L,R:key.d||m1R,J:key.w||m1J,P:key.f||m1P});
- update(p2,p1,{L:key.ArrowLeft,R:key.ArrowRight,J:key.ArrowUp,P:key['/']||m2P});
+ update(p2,p1,{L:key.ArrowLeft||m2L,R:key.ArrowRight||m2R,J:key.ArrowUp||m2J,P:key['/']||m2P});
  draw(p1);draw(p2);drawHP(p1,10);drawHP(p2,canvas.width-110);
  if(p1.hp===0||p2.hp===0){
   gameOver=true;
