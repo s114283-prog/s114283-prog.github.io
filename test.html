@@ -5,195 +5,73 @@
   <title>火柴人對決</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
-    body {
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: #111;
-      color: #fff;
-      font-family: system-ui;
-      touch-action: none;
-    }
-    canvas {
-      background: #f5f5f5;
-      border-radius: 12px;
-    }
-    .controls {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    button {
-      font-size: 16px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: none;
-    }
+    body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:system-ui;touch-action:none}
+    canvas{background:#f5f5f5;border-radius:12px}
+    .controls{display:flex;flex-wrap:wrap;justify-content:space-between;width:360px;margin-top:8px}
+    .side{display:flex;gap:6px}
+    button{font-size:14px;padding:10px 12px;border-radius:10px;border:none}
   </style>
 </head>
 <body>
-  <canvas id="game" width="360" height="400"></canvas>
+<canvas id="game" width="360" height="400"></canvas>
 
-  <!-- 手機控制 -->
-  <div class="controls">
-    <button ontouchstart="keys.left=true" ontouchend="keys.left=false">←</button>
-    <button ontouchstart="keys.right=true" ontouchend="keys.right=false">→</button>
-    <button ontouchstart="keys.jump=true" ontouchend="keys.jump=false">跳</button>
-    <button ontouchstart="keys.punch=true" ontouchend="keys.punch=false">拳</button>
-    <button onclick="restart()">重新開始</button>
+<!-- PVP 手機控制 -->
+<div class="controls">
+  <div class="side">
+    <button ontouchstart="keys.aL=true" ontouchend="keys.aL=false">◀</button>
+    <button ontouchstart="keys.aR=true" ontouchend="keys.aR=false">▶</button>
+    <button ontouchstart="keys.aJ=true" ontouchend="keys.aJ=false">跳</button>
+    <button ontouchstart="keys.aP=true" ontouchend="keys.aP=false">拳</button>
   </div>
+  <div class="side">
+    <button ontouchstart="keys.bP=true" ontouchend="keys.bP=false">拳</button>
+    <button ontouchstart="keys.bJ=true" ontouchend="keys.bJ=false">跳</button>
+    <button ontouchstart="keys.bL=true" ontouchend="keys.bL=false">◀</button>
+    <button ontouchstart="keys.bR=true" ontouchend="keys.bR=false">▶</button>
+  </div>
+</div>
 
-  <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const groundY=300,gravity=0.8;let gameOver=false;
+const keys={};let effects=[];
 
-    const groundY = 300;
-    const gravity = 0.8;
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+function beep(f,d){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=f;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.setValueAtTime(.2,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+d);o.stop(audioCtx.currentTime+d)}
 
-    const keys = {};
-    let gameOver = false;
+function fighter(x){return{x,y:groundY,vy:0,hp:100,onGround:true,punch:false}}
+let p1=fighter(90),p2=fighter(270);
 
-    // === 音效（用 Web Audio，不用外部檔案） ===
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep(freq = 440, duration = 0.08) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-      osc.stop(audioCtx.currentTime + duration);
-    }
+function hitEffect(x,y){effects.push({x,y,r:5,life:10})}
 
-    function createFighter(x) {
-      return {
-        x,
-        y: groundY,
-        vy: 0,
-        hp: 100,
-        punching: false,
-        onGround: true
-      };
-    }
+function update(p,e,ctrl){
+ if(ctrl.L)p.x-=3;if(ctrl.R)p.x+=3;
+ if(ctrl.J&&p.onGround){p.vy=-12;p.onGround=false;beep(300,.05)}
+ p.vy+=gravity;p.y+=p.vy;
+ if(p.y>=groundY){p.y=groundY;p.vy=0;p.onGround=true}
+ if(ctrl.P&&!p.punch){p.punch=true;beep(600,.07);setTimeout(()=>p.punch=false,180);
+  if(Math.abs(p.x-e.x)<40){e.hp=Math.max(0,e.hp-10);beep(180,.1);hitEffect(e.x,e.y-30)}
+ }
+ p.x=Math.max(20,Math.min(canvas.width-20,p.x));
+}
 
-    let p1, p2;
+function draw(p){ctx.strokeStyle='#000';ctx.lineWidth=4;
+ ctx.beginPath();ctx.arc(p.x,p.y-50,10,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(p.x,p.y-40);ctx.lineTo(p.x,p.y-10);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x-10,p.y+15);ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x+10,p.y+15);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(p.x,p.y-30);ctx.lineTo(p.x+(p.punch?25:15),p.y-25);ctx.stroke();}
 
-    function restart() {
-      p1 = createFighter(100);
-      p2 = createFighter(260);
-      gameOver = false;
-      loop();
-    }
+function drawHP(p,x){ctx.fillStyle='#ccc';ctx.fillRect(x,10,100,8);ctx.fillStyle='#4caf50';ctx.fillRect(x,10,p.hp,8)}
 
-    restart();
+function drawEffects(){effects.forEach(e=>{ctx.strokeStyle='orange';ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.stroke();e.r+=2;e.life--});effects=effects.filter(e=>e.life>0)}
 
-    function update(player, enemy) {
-      if (keys.left) player.x -= 3;
-      if (keys.right) player.x += 3;
-
-      if (keys.jump && player.onGround) {
-        player.vy = -12;
-        player.onGround = false;
-        playBeep(300, 0.05);
-      }
-
-      player.vy += gravity;
-      player.y += player.vy;
-
-      if (player.y >= groundY) {
-        player.y = groundY;
-        player.vy = 0;
-        player.onGround = true;
-      }
-
-      if (keys.punch && !player.punching) {
-        player.punching = true;
-        playBeep(600, 0.07); // 出拳音效
-        setTimeout(() => player.punching = false, 200);
-        if (Math.abs(player.x - enemy.x) < 40) {
-          enemy.hp = Math.max(0, enemy.hp - 10);
-          playBeep(180, 0.1); // 命中音效
-        }
-      }
-
-      player.x = Math.max(30, Math.min(canvas.width - 30, player.x));
-    }
-
-    function drawStickman(p) {
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4;
-
-      ctx.beginPath();
-      ctx.arc(p.x, p.y - 50, 10, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y - 40);
-      ctx.lineTo(p.x, p.y - 10);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y - 10);
-      ctx.lineTo(p.x - 10, p.y + 15);
-      ctx.moveTo(p.x, p.y - 10);
-      ctx.lineTo(p.x + 10, p.y + 15);
-      ctx.stroke();
-
-      ctx.beginPath();
-      if (p.punching) {
-        ctx.moveTo(p.x, p.y - 30);
-        ctx.lineTo(p.x + 25, p.y - 30);
-      } else {
-        ctx.moveTo(p.x, p.y - 30);
-        ctx.lineTo(p.x - 15, p.y - 20);
-        ctx.moveTo(p.x, p.y - 30);
-        ctx.lineTo(p.x + 15, p.y - 20);
-      }
-      ctx.stroke();
-    }
-
-    function drawHP(p, x) {
-      ctx.fillStyle = '#ccc';
-      ctx.fillRect(x, 10, 100, 8);
-      ctx.fillStyle = '#4caf50';
-      ctx.fillRect(x, 10, p.hp, 8);
-    }
-
-    function loop() {
-      if (gameOver) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      update(p1, p2);
-      update(p2, p1);
-
-      drawStickman(p1);
-      drawStickman(p2);
-
-      drawHP(p1, 10);
-      drawHP(p2, canvas.width - 110);
-
-      if (p1.hp === 0 || p2.hp === 0) {
-        gameOver = true;
-        playBeep(120, 0.4); // 勝負音效
-        ctx.fillStyle = 'red';
-        ctx.font = '26px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText(p1.hp === 0 ? '玩家 2 獲勝' : '玩家 1 獲勝', canvas.width / 2, canvas.height / 2);
-        ctx.font = '14px system-ui';
-        ctx.fillText('按「重新開始」再玩一次', canvas.width / 2, canvas.height / 2 + 24);
-        return;
-      }
-
-      requestAnimationFrame(loop);
-    }
-  </script>
+function loop(){ctx.clearRect(0,0,canvas.width,canvas.height);
+ update(p1,p2,{L:keys.aL,R:keys.aR,J:keys.aJ,P:keys.aP});
+ update(p2,p1,{L:keys.bL,R:keys.bR,J:keys.bJ,P:keys.bP});
+ draw(p1);draw(p2);drawEffects();drawHP(p1,10);drawHP(p2,canvas.width-110);
+ if(p1.hp===0||p2.hp===0){ctx.fillStyle='red';ctx.font='24px system-ui';ctx.textAlign='center';ctx.fillText(p1.hp===0?'右方獲勝':'左方獲勝',canvas.width/2,canvas.height/2);return}
+ requestAnimationFrame(loop)}
+loop();
+</script>
 </body>
 </html>
