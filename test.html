@@ -29,6 +29,25 @@ input,select{font-size:14px;padding:6px;border-radius:6px;border:none}
 <!-- 遊戲畫面 -->
 <canvas id="game" width="360" height="400"></canvas>
 
+<!-- 操作提示 -->
+<div id="hints" style="font-size:12px;text-align:center;margin-top:6px">
+  <div>💻 電腦：P1【A D 移動｜W 跳｜F 拳】｜P2【← → 移動｜↑ 跳｜/ 拳】</div>
+  <div>📱 手機：左側＝玩家1 操作｜右側＝玩家2 出拳</div>
+</div>
+
+<!-- 手機操作按鈕 -->
+<div id="mobileControls" style="display:none;margin-top:8px;width:360px;display:flex;justify-content:space-between">
+  <div>
+    <button ontouchstart="m1L=true" ontouchend="m1L=false">◀</button>
+    <button ontouchstart="m1R=true" ontouchend="m1R=false">▶</button>
+    <button ontouchstart="m1J=true" ontouchend="m1J=false">跳</button>
+    <button ontouchstart="m1P=true" ontouchend="m1P=false">拳</button>
+  </div>
+  <div>
+    <button ontouchstart="m2P=true" ontouchend="m2P=false">玩家2 拳</button>
+  </div>
+</div>
+
 <!-- 結束畫面 -->
 <div id="end" class="end" style="display:none">
   <h2 id="winner"></h2>
@@ -41,6 +60,7 @@ const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const groundY=300,gravity=0.8;
 const key={};window.addEventListener('keydown',e=>key[e.key]=true);window.addEventListener('keyup',e=>key[e.key]=false);
 let p1,p2,gameOver=false;
+let m1L=false,m1R=false,m1J=false,m1P=false,m2P=false;
 
 function createFighter(x,name,color){return{x,y:groundY,vy:0,hp:100,onGround:true,punch:false,name,color}}
 
@@ -49,6 +69,7 @@ function startGame(){
   p2=createFighter(270,name2.value,color2.value);
   gameOver=false;
   menu.style.display='none';
+  mobileControls.style.display='flex';
   end.style.display='none';
   canvas.style.display='block';
   loop();
@@ -90,8 +111,8 @@ function drawHP(p,x){ctx.fillStyle='#ccc';ctx.fillRect(x,10,100,8);ctx.fillStyle
 function loop(){
  if(gameOver) return;
  ctx.clearRect(0,0,canvas.width,canvas.height);
- update(p1,p2,{L:key.a,R:key.d,J:key.w,P:key.f});
- update(p2,p1,{L:key.ArrowLeft,R:key.ArrowRight,J:key.ArrowUp,P:key['/']});
+ update(p1,p2,{L:key.a||m1L,R:key.d||m1R,J:key.w||m1J,P:key.f||m1P});
+ update(p2,p1,{L:key.ArrowLeft,R:key.ArrowRight,J:key.ArrowUp,P:key['/']||m2P});
  draw(p1);draw(p2);drawHP(p1,10);drawHP(p2,canvas.width-110);
  if(p1.hp===0||p2.hp===0){
   gameOver=true;
