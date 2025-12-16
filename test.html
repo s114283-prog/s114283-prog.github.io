@@ -1,108 +1,99 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <title>火柴人對決（修正版）</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <style>
-    body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:system-ui;touch-action:none}
-    canvas{background:#f5f5f5;border-radius:12px}
-    .controls{display:flex;justify-content:space-between;width:360px;margin-top:8px}
-    .side{display:flex;gap:6px}
-    button{font-size:14px;padding:10px 12px;border-radius:10px;border:none}
-  </style>
+<meta charset="UTF-8" />
+<title>火柴人對決（電腦＋手機分開操作）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<style>
+body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:system-ui;touch-action:none}
+canvas{background:#f5f5f5;border-radius:12px}
+.controls{display:flex;justify-content:space-between;width:360px;margin-top:8px}
+.side{display:flex;gap:6px}
+button{font-size:14px;padding:10px 12px;border-radius:10px;border:none}
+.hint{font-size:12px;opacity:.8;margin-top:4px}
+</style>
 </head>
 <body>
 <canvas id="game" width="360" height="400"></canvas>
 
+<!-- 手機用控制（只控制玩家1） -->
 <div class="controls">
   <div class="side">
-    <button ontouchstart="keys.aL=true" ontouchend="keys.aL=false">◀</button>
-    <button ontouchstart="keys.aR=true" ontouchend="keys.aR=false">▶</button>
-    <button ontouchstart="keys.aJ=true" ontouchend="keys.aJ=false">跳</button>
-    <button ontouchstart="keys.aP=true" ontouchend="keys.aP=false">拳</button>
-  </div>
-  <div class="side">
-    <button ontouchstart="keys.bP=true" ontouchend="keys.bP=false">拳</button>
-    <button ontouchstart="keys.bJ=true" ontouchend="keys.bJ=false">跳</button>
-    <button ontouchstart="keys.bL=true" ontouchend="keys.bL=false">◀</button>
-    <button ontouchstart="keys.bR=true" ontouchend="keys.bR=false">▶</button>
+    <button ontouchstart="touch.left=true" ontouchend="touch.left=false">◀</button>
+    <button ontouchstart="touch.right=true" ontouchend="touch.right=false">▶</button>
+    <button ontouchstart="touch.jump=true" ontouchend="touch.jump=false">跳</button>
+    <button ontouchstart="touch.punch=true" ontouchend="touch.punch=false">拳</button>
   </div>
 </div>
+<div class="hint">電腦：WASD＋F｜手機：螢幕按鈕（玩家1）</div>
 
 <script>
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d');
+const groundY=300,gravity=0.8;
 
-const groundY=300;
-const gravity=0.8;
-const keys={};
-let effects=[];
+// 鍵盤（電腦）
+const key={};
+window.addEventListener('keydown',e=>key[e.key]=true);
+window.addEventListener('keyup',e=>key[e.key]=false);
 
-// 簡單音效（避免卡住）
-function beep(){try{const a=new AudioContext();const o=a.createOscillator();o.connect(a.destination);o.start();o.stop(a.currentTime+0.05);}catch(e){}}
+// 觸控（手機）
+const touch={};
 
-function createFighter(x){
-  return {x:x,y:groundY,vy:0,hp:100,onGround:true,punch:false};
-}
-
-let p1=createFighter(90);
-let p2=createFighter(270);
-
-function hitEffect(x,y){effects.push({x,y,r:5,life:10});}
+function createFighter(x){return{x,y:groundY,vy:0,hp:100,onGround:true,punch:false};}
+let p1=createFighter(90); // 玩家1（手機 or 鍵盤）
+let p2=createFighter(270); // 玩家2（鍵盤）
 
 function update(p,e,ctrl){
-  if(ctrl.L) p.x-=3;
-  if(ctrl.R) p.x+=3;
-
-  if(ctrl.J && p.onGround){p.vy=-12;p.onGround=false;beep();}
-
-  p.vy+=gravity;
-  p.y+=p.vy;
-
-  if(p.y>=groundY){p.y=groundY;p.vy=0;p.onGround=true;}
-
-  if(ctrl.P && !p.punch){
-    p.punch=true;beep();
-    setTimeout(()=>p.punch=false,200);
-    if(Math.abs(p.x-e.x)<40){e.hp=Math.max(0,e.hp-10);hitEffect(e.x,e.y-30);}  
-  }
-
-  p.x=Math.max(20,Math.min(canvas.width-20,p.x));
+ if(ctrl.L)p.x-=3;
+ if(ctrl.R)p.x+=3;
+ if(ctrl.J&&p.onGround){p.vy=-12;p.onGround=false;}
+ p.vy+=gravity;p.y+=p.vy;
+ if(p.y>=groundY){p.y=groundY;p.vy=0;p.onGround=true;}
+ if(ctrl.P&&!p.punch){p.punch=true;setTimeout(()=>p.punch=false,200);
+  if(Math.abs(p.x-e.x)<40)e.hp=Math.max(0,e.hp-10);
+ }
+ p.x=Math.max(20,Math.min(canvas.width-20,p.x));
 }
 
-function draw(p){
-  ctx.strokeStyle='#000';ctx.lineWidth=4;
-  ctx.beginPath();ctx.arc(p.x,p.y-50,10,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(p.x,p.y-40);ctx.lineTo(p.x,p.y-10);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x-10,p.y+15);
-  ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x+10,p.y+15);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(p.x,p.y-30);ctx.lineTo(p.x+(p.punch?25:15),p.y-25);ctx.stroke();
-}
+function draw(p){ctx.strokeStyle='#000';ctx.lineWidth=4;
+ ctx.beginPath();ctx.arc(p.x,p.y-50,10,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(p.x,p.y-40);ctx.lineTo(p.x,p.y-10);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x-10,p.y+15);
+ ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x+10,p.y+15);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(p.x,p.y-30);ctx.lineTo(p.x+(p.punch?25:15),p.y-25);ctx.stroke();}
 
-function drawHP(p,x){ctx.fillStyle='#ccc';ctx.fillRect(x,10,100,8);ctx.fillStyle='#4caf50';ctx.fillRect(x,10,p.hp,8);}
-
-function drawEffects(){effects.forEach(e=>{ctx.strokeStyle='orange';ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.stroke();e.r+=2;e.life--;});effects=effects.filter(e=>e.life>0);}
+function drawHP(p,x){ctx.fillStyle='#ccc';ctx.fillRect(x,10,100,8);ctx.fillStyle='#4caf50';ctx.fillRect(x,10,p.hp,8)}
 
 function loop(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+ ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  update(p1,p2,{L:keys.aL,R:keys.aR,J:keys.aJ,P:keys.aP});
-  update(p2,p1,{L:keys.bL,R:keys.bR,J:keys.bJ,P:keys.bP});
+ // 玩家1：手機 OR 鍵盤 WASD + F
+ update(p1,p2,{
+  L: key.a || touch.left,
+  R: key.d || touch.right,
+  J: key.w || touch.jump,
+  P: key.f || touch.punch
+ });
 
-  draw(p1);draw(p2);
-  drawEffects();
-  drawHP(p1,10);drawHP(p2,canvas.width-110);
+ // 玩家2：只用鍵盤（方向鍵 + /）
+ update(p2,p1,{
+  L: key.ArrowLeft,
+  R: key.ArrowRight,
+  J: key.ArrowUp,
+  P: key['/']
+ });
 
-  if(p1.hp===0||p2.hp===0){
-    ctx.fillStyle='red';ctx.font='24px system-ui';ctx.textAlign='center';
-    ctx.fillText(p1.hp===0?'右邊獲勝':'左邊獲勝',canvas.width/2,canvas.height/2);
-    return;
-  }
+ draw(p1);draw(p2);
+ drawHP(p1,10);drawHP(p2,canvas.width-110);
 
-  requestAnimationFrame(loop);
+ if(p1.hp===0||p2.hp===0){
+  ctx.fillStyle='red';ctx.font='24px system-ui';ctx.textAlign='center';
+  ctx.fillText(p1.hp===0?'玩家2獲勝':'玩家1獲勝',canvas.width/2,canvas.height/2);
+  return;
+ }
+ requestAnimationFrame(loop);
 }
-
 loop();
 </script>
 </body>
