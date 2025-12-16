@@ -2,99 +2,106 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8" />
-<title>火柴人對決（電腦＋手機分開操作）</title>
+<title>火柴人對決（完成版）</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <style>
 body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:system-ui;touch-action:none}
-canvas{background:#f5f5f5;border-radius:12px}
-.controls{display:flex;justify-content:space-between;width:360px;margin-top:8px}
-.side{display:flex;gap:6px}
-button{font-size:14px;padding:10px 12px;border-radius:10px;border:none}
-.hint{font-size:12px;opacity:.8;margin-top:4px}
+canvas{background:#f5f5f5;border-radius:12px;display:none}
+.menu,.end{display:flex;flex-direction:column;gap:12px;align-items:center}
+button{font-size:14px;padding:10px 14px;border-radius:10px;border:none}
+input,select{font-size:14px;padding:6px;border-radius:6px;border:none}
 </style>
 </head>
 <body>
+
+<!-- 角色設定 -->
+<div id="menu" class="menu">
+  <h2>角色設定</h2>
+  <div>玩家1 名字 <input id="name1" value="玩家1"> 顏色
+    <select id="color1"><option value="#000">黑</option><option value="red">紅</option><option value="blue">藍</option><option value="green">綠</option></select>
+  </div>
+  <div>玩家2 名字 <input id="name2" value="玩家2"> 顏色
+    <select id="color2"><option value="#000">黑</option><option value="red">紅</option><option value="blue">藍</option><option value="green">綠</option></select>
+  </div>
+  <button onclick="startGame()">開始遊戲</button>
+</div>
+
+<!-- 遊戲畫面 -->
 <canvas id="game" width="360" height="400"></canvas>
 
-<!-- 手機用控制（只控制玩家1） -->
-<div class="controls">
-  <div class="side">
-    <button ontouchstart="touch.left=true" ontouchend="touch.left=false">◀</button>
-    <button ontouchstart="touch.right=true" ontouchend="touch.right=false">▶</button>
-    <button ontouchstart="touch.jump=true" ontouchend="touch.jump=false">跳</button>
-    <button ontouchstart="touch.punch=true" ontouchend="touch.punch=false">拳</button>
-  </div>
+<!-- 結束畫面 -->
+<div id="end" class="end" style="display:none">
+  <h2 id="winner"></h2>
+  <button onclick="restart()">重新開始</button>
+  <button onclick="backToMenu()">回到角色設定</button>
 </div>
-<div class="hint">電腦：WASD＋F｜手機：螢幕按鈕（玩家1）</div>
 
 <script>
-const canvas=document.getElementById('game');
-const ctx=canvas.getContext('2d');
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const groundY=300,gravity=0.8;
+const key={};window.addEventListener('keydown',e=>key[e.key]=true);window.addEventListener('keyup',e=>key[e.key]=false);
+let p1,p2,gameOver=false;
 
-// 鍵盤（電腦）
-const key={};
-window.addEventListener('keydown',e=>key[e.key]=true);
-window.addEventListener('keyup',e=>key[e.key]=false);
+function createFighter(x,name,color){return{x,y:groundY,vy:0,hp:100,onGround:true,punch:false,name,color}}
 
-// 觸控（手機）
-const touch={};
+function startGame(){
+  p1=createFighter(90,name1.value,color1.value);
+  p2=createFighter(270,name2.value,color2.value);
+  gameOver=false;
+  menu.style.display='none';
+  end.style.display='none';
+  canvas.style.display='block';
+  loop();
+}
 
-function createFighter(x){return{x,y:groundY,vy:0,hp:100,onGround:true,punch:false};}
-let p1=createFighter(90); // 玩家1（手機 or 鍵盤）
-let p2=createFighter(270); // 玩家2（鍵盤）
+function restart(){
+  p1.hp=100;p2.hp=100;
+  p1.x=90;p2.x=270;
+  gameOver=false;
+  end.style.display='none';
+  canvas.style.display='block';
+  loop();
+}
+
+function backToMenu(){
+  canvas.style.display='none';
+  end.style.display='none';
+  menu.style.display='flex';
+}
 
 function update(p,e,ctrl){
- if(ctrl.L)p.x-=3;
- if(ctrl.R)p.x+=3;
- if(ctrl.J&&p.onGround){p.vy=-12;p.onGround=false;}
+ if(ctrl.L)p.x-=3;if(ctrl.R)p.x+=3;
+ if(ctrl.J&&p.onGround){p.vy=-12;p.onGround=false}
  p.vy+=gravity;p.y+=p.vy;
- if(p.y>=groundY){p.y=groundY;p.vy=0;p.onGround=true;}
- if(ctrl.P&&!p.punch){p.punch=true;setTimeout(()=>p.punch=false,200);
-  if(Math.abs(p.x-e.x)<40)e.hp=Math.max(0,e.hp-10);
- }
+ if(p.y>=groundY){p.y=groundY;p.vy=0;p.onGround=true}
+ if(ctrl.P&&!p.punch){p.punch=true;setTimeout(()=>p.punch=false,200);if(Math.abs(p.x-e.x)<40)e.hp=Math.max(0,e.hp-10)}
  p.x=Math.max(20,Math.min(canvas.width-20,p.x));
 }
 
-function draw(p){ctx.strokeStyle='#000';ctx.lineWidth=4;
+function draw(p){ctx.strokeStyle=p.color;ctx.lineWidth=4;
  ctx.beginPath();ctx.arc(p.x,p.y-50,10,0,Math.PI*2);ctx.stroke();
  ctx.beginPath();ctx.moveTo(p.x,p.y-40);ctx.lineTo(p.x,p.y-10);ctx.stroke();
- ctx.beginPath();ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x-10,p.y+15);
- ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x+10,p.y+15);ctx.stroke();
- ctx.beginPath();ctx.moveTo(p.x,p.y-30);ctx.lineTo(p.x+(p.punch?25:15),p.y-25);ctx.stroke();}
+ ctx.beginPath();ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x-10,p.y+15);ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x+10,p.y+15);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(p.x,p.y-30);ctx.lineTo(p.x+(p.punch?25:15),p.y-25);ctx.stroke();
+ ctx.fillStyle=p.color;ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(p.name,p.x,p.y-70)}
 
-function drawHP(p,x){ctx.fillStyle='#ccc';ctx.fillRect(x,10,100,8);ctx.fillStyle='#4caf50';ctx.fillRect(x,10,p.hp,8)}
+function drawHP(p,x){ctx.fillStyle='#ccc';ctx.fillRect(x,10,100,8);ctx.fillStyle=p.color;ctx.fillRect(x,10,p.hp,8)}
 
 function loop(){
+ if(gameOver) return;
  ctx.clearRect(0,0,canvas.width,canvas.height);
-
- // 玩家1：手機 OR 鍵盤 WASD + F
- update(p1,p2,{
-  L: key.a || touch.left,
-  R: key.d || touch.right,
-  J: key.w || touch.jump,
-  P: key.f || touch.punch
- });
-
- // 玩家2：只用鍵盤（方向鍵 + /）
- update(p2,p1,{
-  L: key.ArrowLeft,
-  R: key.ArrowRight,
-  J: key.ArrowUp,
-  P: key['/']
- });
-
- draw(p1);draw(p2);
- drawHP(p1,10);drawHP(p2,canvas.width-110);
-
+ update(p1,p2,{L:key.a,R:key.d,J:key.w,P:key.f});
+ update(p2,p1,{L:key.ArrowLeft,R:key.ArrowRight,J:key.ArrowUp,P:key['/']});
+ draw(p1);draw(p2);drawHP(p1,10);drawHP(p2,canvas.width-110);
  if(p1.hp===0||p2.hp===0){
-  ctx.fillStyle='red';ctx.font='24px system-ui';ctx.textAlign='center';
-  ctx.fillText(p1.hp===0?'玩家2獲勝':'玩家1獲勝',canvas.width/2,canvas.height/2);
+  gameOver=true;
+  canvas.style.display='none';
+  winner.innerText=(p1.hp===0?p2.name:p1.name)+' 獲勝';
+  end.style.display='flex';
   return;
  }
  requestAnimationFrame(loop);
 }
-loop();
 </script>
 </body>
 </html>
