@@ -29,9 +29,41 @@ input,select{font-size:14px;padding:6px;border-radius:6px;border:none}
 <!-- 遊戲畫面 -->
 <canvas id="game" width="360" height="400"></canvas>
 
-<!-- 操作提示（圖示化） -->
+<!-- 操作提示（圖示化＋雙手） -->
 <div id="hints" style="font-size:12px;text-align:center;margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-  <div style="background:#222;padding:6px 10px;border-radius:8px">💻 P1：<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">A</span><span style="border:1px solid #555;border-radius:4px;padding:2px 4px">D</span> 移動｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">W</span> 跳｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">F</span> 👊</div>
+  <div style="background:#222;padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:6px">
+    <span style="font-size:20px">✋</span>
+    <span>💻 P1</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">A</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">D</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">W</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">F</span>
+  </div>
+
+  <div style="background:#222;padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:6px">
+    <span style="font-size:20px">🤚</span>
+    <span>💻 P2</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">←</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">→</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">↑</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">/</span>
+  </div>
+
+  <div style="background:#222;padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:6px">
+    <span style="font-size:20px">✋</span>
+    <span>📱 玩家1</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">◀</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">▶</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">跳</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">👊</span>
+  </div>
+
+  <div style="background:#222;padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:6px">
+    <span style="font-size:20px">🤚</span>
+    <span>📱 玩家2</span>
+    <span style="border:1px solid #555;border-radius:6px;padding:2px 6px">👊</span>
+  </div>
+</div>
   <div style="background:#222;padding:6px 10px;border-radius:8px">💻 P2：<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">←</span><span style="border:1px solid #555;border-radius:4px;padding:2px 4px">→</span> 移動｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">↑</span> 跳｜<span style="border:1px solid #555;border-radius:4px;padding:2px 4px">/</span> 👊</div>
   <div style="background:#222;padding:6px 10px;border-radius:8px">📱 玩家1：◀ ▶ 跳 👊</div>
   <div style="background:#222;padding:6px 10px;border-radius:8px">📱 玩家2：👊</div>
