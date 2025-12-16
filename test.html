@@ -64,6 +64,7 @@ button{
 <body>
 <div id="app">
 
+<!-- 選單 -->
 <div id="menu" class="menu">
   <h2>火柴人對決</h2>
   <div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1" value="#000000"></div>
@@ -71,8 +72,10 @@ button{
   <button onclick="start()">開始遊戲</button>
 </div>
 
+<!-- 遊戲 -->
 <canvas id="game" width="360" height="400" style="display:none"></canvas>
 
+<!-- 手機雙人控制（兩邊一樣） -->
 <div id="mobileControls">
   <div>
     <button ontouchstart="m1L=1" ontouchend="m1L=0">◀</button>
@@ -88,11 +91,14 @@ button{
   </div>
 </div>
 
+<!-- 操作說明（只一組） -->
 <div style="font-size:12px;margin-top:6px">
-  🧍 電腦：P1 A D W F ｜ P2 ← → ↑ / <br>
-  📱 手機：左右移動・跳躍・出拳
+  🧍 電腦：P1 <span class="key">A</span><span class="key">D</span><span class="key">W</span><span class="key">F</span>
+  ｜ P2 <span class="key">←</span><span class="key">→</span><span class="key">↑</span><span class="key">/</span><br>
+  📱 手機：左右移動・跳躍・出拳（雙人同機）
 </div>
 
+<!-- 結束 -->
 <div id="end" class="end" style="display:none">
   <h2 id="win"></h2>
   <button onclick="restart()">再來一場</button>
@@ -148,6 +154,12 @@ function update(p,e,L,R,J,P){
   }
 }
 
+function drawHP(){
+  ctx.fillStyle='red';
+  ctx.fillRect(10,10,p1.hp*1.2,8);
+  ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
+}
+
 function drawFighter(p){
   ctx.strokeStyle=p.color;
   ctx.lineWidth=4;
@@ -169,19 +181,13 @@ function drawFighter(p){
   ctx.lineTo(p.x+(p.punch?25:15),p.y-25);
   ctx.stroke();
 
-  // 腳（重點）
+  // 腳（補回來的）
   ctx.beginPath();
   ctx.moveTo(p.x,p.y-15);
   ctx.lineTo(p.x-10,p.y);
   ctx.moveTo(p.x,p.y-15);
   ctx.lineTo(p.x+10,p.y);
   ctx.stroke();
-}
-
-function drawHP(){
-  ctx.fillStyle="red";
-  ctx.fillRect(10,10,p1.hp*1.2,8);
-  ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
 }
 
 function loop(){
