@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>火柴人對決</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
 <style>
 html,body{
   margin:0;
@@ -21,10 +20,6 @@ body{
 }
 #app{
   width:360px;
-  max-width:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
   text-align:center;
 }
 canvas{
@@ -33,10 +28,9 @@ canvas{
   margin:10px 0;
 }
 button{
-  padding:10px 14px;
+  padding:10px;
   border-radius:10px;
   border:none;
-  font-size:14px;
 }
 .menu,.end{
   display:flex;
@@ -46,7 +40,6 @@ button{
 }
 #mobileControls{
   display:none;
-  width:100%;
   justify-content:space-between;
 }
 @media (orientation: landscape){
@@ -56,7 +49,6 @@ button{
   border:1px solid #555;
   padding:2px 6px;
   border-radius:6px;
-  margin:0 2px;
 }
 </style>
 </head>
@@ -64,7 +56,6 @@ button{
 <body>
 <div id="app">
 
-<!-- 選單 -->
 <div id="menu" class="menu">
   <h2>火柴人對決</h2>
   <div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1" value="#000000"></div>
@@ -72,10 +63,8 @@ button{
   <button onclick="start()">開始遊戲</button>
 </div>
 
-<!-- 遊戲 -->
 <canvas id="game" width="360" height="400" style="display:none"></canvas>
 
-<!-- 手機雙人控制（兩邊一樣） -->
 <div id="mobileControls">
   <div>
     <button ontouchstart="m1L=1" ontouchend="m1L=0">◀</button>
@@ -91,14 +80,12 @@ button{
   </div>
 </div>
 
-<!-- 操作說明（只一組） -->
-<div style="font-size:12px;margin-top:6px">
-  🧍 電腦：P1 <span class="key">A</span><span class="key">D</span><span class="key">W</span><span class="key">F</span>
+<div style="font-size:12px">
+  💻 P1 <span class="key">A</span><span class="key">D</span><span class="key">W</span><span class="key">F</span>
   ｜ P2 <span class="key">←</span><span class="key">→</span><span class="key">↑</span><span class="key">/</span><br>
-  📱 手機：左右移動・跳躍・出拳（雙人同機）
+  📱 手機：左右・跳躍・出拳
 </div>
 
-<!-- 結束 -->
 <div id="end" class="end" style="display:none">
   <h2 id="win"></h2>
   <button onclick="restart()">再來一場</button>
@@ -110,47 +97,49 @@ button{
 <script>
 const c=document.getElementById('game'),ctx=c.getContext('2d');
 const ground=300,grav=0.8;
-let key={},m1L=0,m1R=0,m1J=0,m1P=0,m2L=0,m2R=0,m2J=0,m2P=0;
-window.onkeydown=e=>key[e.key]=1;
-window.onkeyup=e=>key[e.key]=0;
+let k={},m1L=0,m1R=0,m1J=0,m1P=0,m2L=0,m2R=0,m2J=0,m2P=0;
+window.onkeydown=e=>k[e.key]=1;
+window.onkeyup=e=>k[e.key]=0;
 
-function fighter(x,n,col){
-  return{x,y:ground,vy:0,hp:100,name:n,color:col,punch:0,onGround:1}
+const AudioCtx=new(window.AudioContext||webkitAudioContext)();
+function sound(f){
+  const o=AudioCtx.createOscillator(),g=AudioCtx.createGain();
+  o.connect(g);g.connect(AudioCtx.destination);
+  o.frequency.value=f;g.gain.value=0.2;
+  o.start();o.stop(AudioCtx.currentTime+0.08);
 }
-let p1,p2,over=0;
+
+function fighter(x,n,c){
+  return{x,y:ground,vy:0,hp:100,name:n,color:c,
+    punchL:0,punchR:0,onGround:1,dead:0,rot:0}
+}
+let p1,p2,over=0,effects=[];
 
 function start(){
   p1=fighter(90,n1.value,c1.value);
   p2=fighter(270,n2.value,c2.value);
   menu.style.display='none';
-  c.style.display='block';
-  over=0;
-  loop();
+  game.style.display='block';
+  over=0;loop();
 }
 function restart(){
-  p1.hp=p2.hp=100;
-  end.style.display='none';
-  c.style.display='block';
-  over=0;
-  loop();
+  p1.hp=p2.hp=100;p1.dead=p2.dead=0;p1.rot=p2.rot=0;
+  end.style.display='none';game.style.display='block';over=0;loop();
 }
-function back(){
-  end.style.display='none';
-  c.style.display='none';
-  menu.style.display='flex';
-}
+function back(){end.style.display='none';game.style.display='none';menu.style.display='flex'}
+
+function hit(x,y){effects.push({x,y,r:5,l:10});sound(80)}
 
 function update(p,e,L,R,J,P){
-  if(L)p.x-=3;
-  if(R)p.x+=3;
+  if(p.dead)return;
+  if(L)p.x-=3;if(R)p.x+=3;
   if(J&&p.onGround){p.vy=-12;p.onGround=0}
-  p.vy+=grav;
-  p.y+=p.vy;
+  p.vy+=grav;p.y+=p.vy;
   if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=1}
-  if(P&&!p.punch){
-    p.punch=1;
-    setTimeout(()=>p.punch=0,200);
-    if(Math.abs(p.x-e.x)<40)e.hp-=10;
+  if(P&&!p.punchL){
+    sound(180);p.punchL=p.punchR=1;
+    if(Math.abs(p.x-e.x)<40){e.hp-=10;hit(e.x,e.y-40)}
+    setTimeout(()=>p.punchL=p.punchR=0,200);
   }
 }
 
@@ -160,48 +149,41 @@ function drawHP(){
   ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
 }
 
-function drawFighter(p){
-  ctx.strokeStyle=p.color;
-  ctx.lineWidth=4;
+function drawF(p){
+  ctx.save();
+  ctx.translate(p.x,p.y-20);
+  ctx.rotate(p.rot);
+  ctx.strokeStyle=p.color;ctx.lineWidth=4;
+  ctx.beginPath();ctx.arc(0,-30,10,0,7);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-(p.punchL?25:15),-5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo((p.punchR?25:15),-5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(-10,20);ctx.moveTo(0,5);ctx.lineTo(10,20);ctx.stroke();
+  ctx.restore();
+}
 
-  // 頭
-  ctx.beginPath();
-  ctx.arc(p.x,p.y-50,10,0,Math.PI*2);
-  ctx.stroke();
-
-  // 身體
-  ctx.beginPath();
-  ctx.moveTo(p.x,p.y-40);
-  ctx.lineTo(p.x,p.y-15);
-  ctx.stroke();
-
-  // 手
-  ctx.beginPath();
-  ctx.moveTo(p.x,p.y-30);
-  ctx.lineTo(p.x+(p.punch?25:15),p.y-25);
-  ctx.stroke();
-
-  // 腳（補回來的）
-  ctx.beginPath();
-  ctx.moveTo(p.x,p.y-15);
-  ctx.lineTo(p.x-10,p.y);
-  ctx.moveTo(p.x,p.y-15);
-  ctx.lineTo(p.x+10,p.y);
-  ctx.stroke();
+function drawEffects(){
+  effects.forEach(e=>{
+    ctx.strokeStyle='orange';
+    ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.stroke();
+    e.r+=2;e.l--;
+  });
+  effects=effects.filter(e=>e.l>0);
 }
 
 function loop(){
   if(over)return;
   ctx.clearRect(0,0,360,400);
   drawHP();
-  update(p1,p2,key.a||m1L,key.d||m1R,key.w||m1J,key.f||m1P);
-  update(p2,p1,key.ArrowLeft||m2L,key.ArrowRight||m2R,key.ArrowUp||m2J,key['/']||m2P);
-  drawFighter(p1);
-  drawFighter(p2);
-  if(p1.hp<=0||p2.hp<=0){
-    over=1;
-    c.style.display='none';
-    end.style.display='flex';
+  update(p1,p2,k.a||m1L,k.d||m1R,k.w||m1J,k.f||m1P);
+  update(p2,p1,k.ArrowLeft||m2L,k.ArrowRight||m2R,k.ArrowUp||m2J,k['/']||m2P);
+  if(p1.hp<=0)p1.dead=1;
+  if(p2.hp<=0)p2.dead=1;
+  if(p1.dead&&p1.rot>-Math.PI/2)p1.rot-=0.05;
+  if(p2.dead&&p2.rot< Math.PI/2)p2.rot+=0.05;
+  drawF(p1);drawF(p2);drawEffects();
+  if(Math.abs(p1.rot)>=Math.PI/2||Math.abs(p2.rot)>=Math.PI/2){
+    over=1;game.style.display='none';end.style.display='flex';
     win.innerText=(p1.hp<=0?p2.name:p1.name)+' 勝利';
     return;
   }
