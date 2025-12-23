@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>火柴人對決</title>
-<link rel="icon" href="images.jpg">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="images.jpg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
 <style>
 html,body{margin:0;width:100%;height:100%}
 body{
@@ -15,6 +16,15 @@ body{
 canvas{background:#f5f5f5;border-radius:12px;margin:10px 0}
 button,select{padding:8px 12px;border-radius:10px;border:none}
 .menu,.end{display:flex;flex-direction:column;gap:10px;align-items:center}
+.key{
+  display:inline-block;border:1px solid #555;
+  padding:2px 6px;border-radius:6px;
+  background:#222;font-size:11px
+}
+#mobileControls{display:none;justify-content:space-between}
+@media (orientation: landscape){
+  #mobileControls{display:flex}
+}
 </style>
 </head>
 
@@ -35,12 +45,33 @@ button,select{padding:8px 12px;border-radius:10px;border:none}
   </select>
 
   <div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1" value="#000000"></div>
-  <div>玩家2 <input id="n2" value="電腦"> <input type="color" id="c2" value="#ff0000"></div>
+  <div>玩家2 <input id="n2" value="玩家2"> <input type="color" id="c2" value="#ff0000"></div>
 
   <button onclick="start()">開始遊戲</button>
 </div>
 
 <canvas id="game" width="360" height="400" style="display:none"></canvas>
+
+<div id="mobileControls">
+  <div>
+    <button ontouchstart="m1L=1" ontouchend="m1L=0">◀</button>
+    <button ontouchstart="m1R=1" ontouchend="m1R=0">▶</button>
+    <button ontouchstart="m1P=1" ontouchend="m1P=0">👊</button>
+    <button ontouchstart="m1U=1" ontouchend="m1U=0">🔥</button>
+  </div>
+  <div>
+    <button ontouchstart="m2L=1" ontouchend="m2L=0">◀</button>
+    <button ontouchstart="m2R=1" ontouchend="m2R=0">▶</button>
+    <button ontouchstart="m2P=1" ontouchend="m2P=0">👊</button>
+    <button ontouchstart="m2U=1" ontouchend="m2U=0">🔥</button>
+  </div>
+</div>
+
+<div id="hint" style="font-size:12px;margin-top:6px">
+💻 P1 <span class="key">A</span><span class="key">D</span><span class="key">F</span><span class="key">G</span>
+｜ P2 <span class="key">←</span><span class="key">→</span><span class="key">/</span><span class="key">.</span><br>
+📱 手機：左右・出拳・必殺
+</div>
 
 <div id="end" class="end" style="display:none">
   <h2 id="win"></h2>
@@ -52,131 +83,54 @@ button,select{padding:8px 12px;border-radius:10px;border:none}
 <script>
 const c=game,ctx=c.getContext("2d");
 const ground=300,grav=0.8;
-let k={},mode="cpu",aiLevel="normal",over=false;
+let k={},over=false,mode="cpu",aiLevel="normal";
+let m1L=0,m1R=0,m1P=0,m1U=0,m2L=0,m2R=0,m2P=0,m2U=0;
+
 window.onkeydown=e=>k[e.key]=1;
 window.onkeyup=e=>k[e.key]=0;
 
 function fighter(x,name,color){
-  return{
-    x,y:ground,vy:0,hp:100,energy:0,
-    name,color,dead:false,rot:0,
-    punchCD:0,ultCD:0
-  }
+  return{x,y:ground,vy:0,hp:100,energy:0,
+    name,color,dead:false,rot:0,punchCD:0,ultCD:0}
 }
 let p1,p2,effects=[];
 
 const AI={
-  easy:{speed:2.2,range:45,retreat:false,ult:0.01},
-  normal:{speed:3,range:60,retreat:true,ult:0.05},
-  hard:{speed:3.6,range:70,retreat:true,ult:0.12}
+  easy:{speed:2.2,range:50,ult:0.01},
+  normal:{speed:3,range:65,ult:0.05},
+  hard:{speed:3.6,range:75,ult:0.12}
 };
 
-function hit(att,def,damage){
-  def.hp=Math.max(0,def.hp-damage);
-  att.energy=Math.min(100,att.energy+10);
-  def.energy=Math.min(100,def.energy+5);
-  effects.push({x:def.x,y:def.y-40,r:6,l:14});
+function hit(a,d,dam){
+  d.hp=Math.max(0,d.hp-dam);
+  a.energy=Math.min(100,a.energy+10);
+  effects.push({x:d.x,y:d.y-40,r:6,l:12});
 }
 
 function update(p,e,L,R,P,U,s){
   if(p.dead)return;
-
-  if(L)p.x-=s;
-  if(R)p.x+=s;
+  if(L)p.x-=s;if(R)p.x+=s;
   p.x=Math.max(20,Math.min(340,p.x));
-
   p.vy+=grav;p.y+=p.vy;
   if(p.y>=ground){p.y=ground;p.vy=0}
 
   if(p.punchCD>0)p.punchCD--;
   if(p.ultCD>0)p.ultCD--;
 
-  if(P && p.punchCD===0){
-    p.punchCD=20;
-    if(Math.abs(p.x-e.x)<55&&!e.dead)hit(p,e,10);
+  if(P&&p.punchCD===0){
+    p.punchCD=18;
+    if(Math.abs(p.x-e.x)<55)hit(p,e,10);
   }
-
-  if(U && p.energy>=100 && p.ultCD===0){
+  if(U&&p.energy>=100&&p.ultCD===0){
     p.energy=0;p.ultCD=80;
     if(Math.abs(p.x-e.x)<90)hit(p,e,30);
   }
 }
 
-function cpuLogic(cpu,pl){
-  const cfg=AI[aiLevel];
+function cpu(cpu,pl){
+  const c=AI[aiLevel];
+  let d=pl.x-cpu.x,a=Math.abs(d);
   let L=0,R=0,P=0,U=0;
-  const d=pl.x-cpu.x,a=Math.abs(d);
-
-  if(a>cfg.range){d>0?R=1:L=1;}
-  else{
-    if(cfg.retreat && Math.random()<0.3){d>0?L=1:R=1;}
-    P=1;
-  }
-
-  if(cpu.energy>=100 && Math.random()<cfg.ult)U=1;
-  update(cpu,pl,L,R,P,U,cfg.speed);
-}
-
-function drawF(p){
-  ctx.save();
-  ctx.translate(p.x,p.y-20);
-  ctx.rotate(p.rot);
-  ctx.strokeStyle=p.color;ctx.lineWidth=4;
-  ctx.beginPath();ctx.arc(0,-30,10,0,7);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,5);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-20,-5);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(20,-5);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(-10,25);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(10,25);ctx.stroke();
-  ctx.restore();
-}
-
-function draw(){
-  ctx.clearRect(0,0,360,400);
-  ctx.fillStyle="red";
-  ctx.fillRect(10,10,p1.hp*1.2,6);
-  ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,6);
-  ctx.fillStyle="orange";
-  ctx.fillRect(10,18,p1.energy*1.2,4);
-  ctx.fillRect(360-10-p2.energy*1.2,18,p2.energy*1.2,4);
-
-  drawF(p1);drawF(p2);
-  effects.forEach(e=>{
-    ctx.strokeStyle="orange";
-    ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.stroke();
-    e.r+=2;e.l--;
-  });
-  effects=effects.filter(e=>e.l>0);
-}
-
-function loop(){
-  if(over)return;
-
-  update(p1,p2,k.a,k.d,k.f,k.g,3);
-  if(mode==="cpu")cpuLogic(p2,p1);
-  else update(p2,p1,k.ArrowLeft,k.ArrowRight,k["/"],k["."],3);
-
-  if(p1.hp<=0)p1.dead=true;
-  if(p2.hp<=0)p2.dead=true;
-  if(p1.dead&&p1.rot>-Math.PI/2)p1.rot-=0.05;
-  if(p2.dead&&p2.rot< Math.PI/2)p2.rot+=0.05;
-
-  draw();
-  if(Math.abs(p1.rot)>=Math.PI/2||Math.abs(p2.rot)>=Math.PI/2){
-    over=true;game.style.display="none";end.style.display="flex";
-    win.innerText=(p1.hp<=0?p2.name:p1.name)+" 勝利";
-  }else requestAnimationFrame(loop);
-}
-
-function start(){
-  mode=document.querySelector('input[name="mode"]:checked').value;
-  aiLevel=difficulty.value;
-  p1=fighter(90,n1.value,c1.value);
-  p2=fighter(270,n2.value,c2.value);
-  menu.style.display="none";
-  game.style.display="block";
-  over=false;loop();
-}
-</script>
-</body>
-</html>
+  if(a>c.range){d>0?R=1:L=1}else P=1;
+  if(cpu.energy>=100&&Math.random()<c.ult)U=1;
+  update(cpu,
