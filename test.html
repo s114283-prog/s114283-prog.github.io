@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>火柴人對決</title>
 <link rel="icon" href="images.jpg">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 html,body{margin:0;width:100%;height:100%}
 body{
@@ -37,7 +37,7 @@ AI：
 </select>
 </div>
 
-<div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1"></div>
+<div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1" value="#000000"></div>
 <div>玩家2 <input id="n2" value="玩家2"> <input type="color" id="c2" value="#ff0000"></div>
 
 <button onclick="start()">開始</button>
@@ -68,99 +68,175 @@ onkeyup=e=>k[e.key]=0;
 
 function fighter(x,name,color){
 return{
-x,y:ground,vy:0,hp:100,energy:0,
-name,color,weapon:"fist",
-punch:false,ult:false,
-onGround:true,dead:false,rot:0
+  x,y:ground,vy:0,
+  hp:100,name,color,
+  weapon:"fist",
+  punch:false,
+  onGround:true,
+  dead:false,
+  step:0,
+  switchCD:0
 }}
 
 let p1,p2,effects=[];
 
 const AI={
-easy:{speed:2,attack:0.03},
-normal:{speed:3,attack:0.08},
-hard:{speed:4,attack:0.15}
+easy:{speed:2,attack:0.03,jump:0.01},
+normal:{speed:3,attack:0.08,jump:0.02},
+hard:{speed:4,attack:0.15,jump:0.04}
 };
 
 function cpuControl(cpu,pl){
 const a=AI[aiLevel];
-let L=0,R=0,P=0;
+let L=0,R=0,J=0,P=0;
 const d=pl.x-cpu.x;
-if(Math.abs(d)>50) d>0?R=1:L=1;
+
+if(Math.abs(d)>45) d>0?R=1:L=1;
 if(Math.random()<a.attack) P=1;
-update(cpu,pl,L,R,0,P,0,a.speed);
+if(cpu.onGround && Math.random()<a.jump) J=1;
+
+update(cpu,pl,L,R,J,P,a.speed);
 }
 
-function update(p,e,L,R,J,P,U,s=3){
+function update(p,e,L,R,J,P,s=3){
 if(p.dead)return;
-if(L)p.x-=s;if(R)p.x+=s;
-p.x=Math.max(20,Math.min(340,p.x));
-p.vy+=grav;p.y+=p.vy;
-if(p.y>=ground){p.y=ground;p.vy=0}
 
-if(k.g&&p===p1 || k["."]&&p===p2){
-p.weapon=p.weapon==="fist"?"sword":"fist"
+if(L||R) p.step+=0.15;
+else p.step=0;
+
+if(L)p.x-=s;
+if(R)p.x+=s;
+p.x=Math.max(20,Math.min(340,p.x));
+
+if(J&&p.onGround){
+  p.vy=-12;
+  p.onGround=false;
+}
+p.vy+=grav;
+p.y+=p.vy;
+if(p.y>=ground){
+  p.y=ground;
+  p.vy=0;
+  p.onGround=true;
+}
+
+if(p.switchCD>0) p.switchCD--;
+
+if((p===p1 && k.g)||(p===p2 && k["."])){
+  if(p.switchCD===0){
+    p.weapon=p.weapon==="fist"?"sword":"fist";
+    p.switchCD=20;
+  }
 }
 
 if(P&&!p.punch){
-p.punch=true;
-let dmg=p.weapon==="sword"?18:10;
-if(Math.abs(p.x-e.x)<55){
-e.hp=Math.max(0,e.hp-dmg);
-p.energy=Math.min(100,p.energy+15);
-for(let i=0;i<8;i++){
-effects.push({x:e.x,y:e.y-30,
-vx:(Math.random()-0.5)*4,
-vy:-Math.random()*4,l:20})
-}}
-setTimeout(()=>p.punch=false,250);
+  p.punch=true;
+  let dmg=p.weapon==="sword"?18:10;
+  if(Math.abs(p.x-e.x)<55){
+    e.hp=Math.max(0,e.hp-dmg);
+    for(let i=0;i<10;i++){
+      effects.push({
+        x:e.x,y:e.y-30,
+        vx:(Math.random()-0.5)*4,
+        vy:-Math.random()*4,
+        l:25
+      });
+    }
+  }
+  setTimeout(()=>p.punch=false,220);
 }
 }
 
 function drawF(p){
-ctx.save();ctx.translate(p.x,p.y-20);ctx.rotate(p.rot);
-ctx.strokeStyle=p.color;ctx.lineWidth=4;
-ctx.beginPath();ctx.arc(0,-30,10,0,7);ctx.stroke();
-ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,10);ctx.stroke();
-ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-20,0);ctx.stroke();
-ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(20,0);ctx.stroke();
+ctx.save();
+ctx.translate(p.x,p.y-20);
+ctx.strokeStyle=p.color;
+ctx.lineWidth=4;
+
+/* 頭 */
+ctx.beginPath();
+ctx.arc(0,-30,10,0,Math.PI*2);
+ctx.stroke();
+
+/* 身體 */
+ctx.beginPath();
+ctx.moveTo(0,-20);
+ctx.lineTo(0,10);
+ctx.stroke();
+
+/* 手 */
+ctx.beginPath();
+ctx.moveTo(0,-10);
+ctx.lineTo(-20,-5);
+ctx.stroke();
+ctx.beginPath();
+ctx.moveTo(0,-10);
+ctx.lineTo(20,-5);
+ctx.stroke();
+
+/* 劍 */
 if(p.weapon==="sword"){
-ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(40,-10);ctx.stroke();
+ctx.beginPath();
+ctx.moveTo(20,-5);
+ctx.lineTo(40,-15);
+ctx.stroke();
 }
+
+/* 腳動畫 */
+let leg=Math.sin(p.step)*10;
+if(!p.onGround) leg=0;
+
+ctx.beginPath();
+ctx.moveTo(0,10);
+ctx.lineTo(-10,25+leg);
+ctx.stroke();
+
+ctx.beginPath();
+ctx.moveTo(0,10);
+ctx.lineTo(10,25-leg);
+ctx.stroke();
+
 ctx.restore();
 }
 
 function draw(){
 ctx.clearRect(0,0,360,400);
+
+/* 血量 */
 ctx.fillStyle="red";
 ctx.fillRect(10,10,p1.hp*1.2,8);
 ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
-ctx.fillStyle="cyan";
-ctx.fillRect(10,22,p1.energy*1.2,6);
-ctx.fillRect(360-10-p2.energy*1.2,22,p2.energy*1.2,6);
 
-drawF(p1);drawF(p2);
+drawF(p1);
+drawF(p2);
 
+/* 流血 */
 effects.forEach(e=>{
-ctx.fillStyle="red";
-ctx.fillRect(e.x,e.y,3,3);
-e.x+=e.vx;e.y+=e.vy;e.vy+=0.3;e.l--;
+  ctx.fillStyle="darkred";
+  ctx.fillRect(e.x,e.y,3,3);
+  e.x+=e.vx;
+  e.y+=e.vy;
+  e.vy+=0.3;
+  e.l--;
 });
 effects=effects.filter(e=>e.l>0);
 }
 
 function loop(){
 if(over)return;
+
+update(p1,p2,k.a,k.d,k.w,k.f,3);
 if(gameMode==="cpu") cpuControl(p2,p1);
-update(p1,p2,k.a,k.d,0,k.f,0);
 if(gameMode==="pvp")
-update(p2,p1,k.ArrowLeft,k.ArrowRight,0,k["/"],0);
+  update(p2,p1,k.ArrowLeft,k.ArrowRight,k.ArrowUp,k["/"],3);
 
 draw();
+
 if(p1.hp<=0||p2.hp<=0){
-over=true;game.style.display="none";
-end.style.display="flex";
-win.innerText=(p1.hp<=0?p2.name:p1.name)+" 勝利";
+  over=true;
+  game.style.display="none";
+  end.style.display="flex";
+  win.innerText=(p1.hp<=0?p2.name:p1.name)+" 勝利";
 }
 requestAnimationFrame(loop);
 }
@@ -172,11 +248,14 @@ p1=fighter(90,n1.value,c1.value);
 p2=fighter(270,n2.value,c2.value);
 menu.style.display="none";
 game.style.display="block";
-over=false;loop();
+over=false;
+loop();
 }
+
 function back(){
 end.style.display="none";
 menu.style.display="flex";
+game.style.display="none";
 }
 </script>
 </body>
