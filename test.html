@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>火柴人對決</title>
-<link rel="icon" type="image/png" href="images.jpg">
+<link rel="icon" href="images.jpg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
 <style>
 html,body{margin:0;width:100%;height:100%}
 body{
@@ -16,8 +15,6 @@ body{
 canvas{background:#f5f5f5;border-radius:12px;margin:10px 0}
 button,select,input{padding:6px 10px;border-radius:10px;border:none}
 .menu,.end{display:flex;flex-direction:column;gap:10px;align-items:center}
-#mobileControls{display:none;justify-content:space-between}
-@media (orientation: landscape){#mobileControls{display:flex}}
 .key{border:1px solid #555;padding:2px 6px;border-radius:6px}
 </style>
 </head>
@@ -26,52 +23,37 @@ button,select,input{padding:6px 10px;border-radius:10px;border:none}
 <div id="app">
 
 <div id="menu" class="menu">
-  <h2>火柴人對決</h2>
+<h2>火柴人對決</h2>
 
-  <label><input type="radio" name="mode" value="cpu" checked> 單人（打電腦）</label>
-  <label><input type="radio" name="mode" value="pvp"> 雙人對戰</label>
+<label><input type="radio" name="mode" value="cpu" checked> 單人</label>
+<label><input type="radio" name="mode" value="pvp"> 雙人</label>
 
-  <div>
-    AI 難度：
-    <select id="difficulty">
-      <option value="easy">簡單</option>
-      <option value="normal" selected>普通</option>
-      <option value="hard">困難</option>
-    </select>
-  </div>
+<div>
+AI：
+<select id="difficulty">
+<option value="easy">簡單</option>
+<option value="normal" selected>普通</option>
+<option value="hard">困難</option>
+</select>
+</div>
 
-  <div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1" value="#000000"></div>
-  <div>玩家2 <input id="n2" value="玩家2"> <input type="color" id="c2" value="#ff0000"></div>
+<div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1"></div>
+<div>玩家2 <input id="n2" value="玩家2"> <input type="color" id="c2" value="#ff0000"></div>
 
-  <button onclick="start()">開始遊戲</button>
+<button onclick="start()">開始</button>
 </div>
 
 <canvas id="game" width="360" height="400" style="display:none"></canvas>
 
-<div id="mobileControls">
-  <div>
-    <button ontouchstart="m1L=1" ontouchend="m1L=0">◀</button>
-    <button ontouchstart="m1R=1" ontouchend="m1R=0">▶</button>
-    <button ontouchstart="m1J=1" ontouchend="m1J=0">跳</button>
-    <button ontouchstart="m1P=1" ontouchend="m1P=0">👊</button>
-  </div>
-  <div>
-    <button ontouchstart="m2L=1" ontouchend="m2L=0">◀</button>
-    <button ontouchstart="m2R=1" ontouchend="m2R=0">▶</button>
-    <button ontouchstart="m2J=1" ontouchend="m2J=0">跳</button>
-    <button ontouchstart="m2P=1" ontouchend="m2P=0">👊</button>
-  </div>
-</div>
-
 <div style="font-size:12px">
-💻 P1 <span class="key">A</span><span class="key">D</span><span class="key">W</span><span class="key">F</span><span class="key">G</span>
-｜ P2 <span class="key">←</span><span class="key">→</span><span class="key">↑</span><span class="key">/</span><span class="key">.</span>
+P1：A D W F <b>G</b>｜
+P2：← → ↑ / <b>.</b>
 </div>
 
 <div id="end" class="end" style="display:none">
-  <h2 id="win"></h2>
-  <button onclick="start()">再來一場</button>
-  <button onclick="back()">回設定</button>
+<h2 id="win"></h2>
+<button onclick="start()">再來</button>
+<button onclick="back()">回設定</button>
 </div>
 
 </div>
@@ -80,129 +62,121 @@ button,select,input{padding:6px 10px;border-radius:10px;border:none}
 const c=game,ctx=c.getContext("2d");
 const ground=300,grav=0.8;
 let k={},over=false,gameMode="cpu",aiLevel="normal";
-let m1L=0,m1R=0,m1J=0,m1P=0,m2L=0,m2R=0,m2J=0,m2P=0;
-window.onkeydown=e=>k[e.key]=1;
-window.onkeyup=e=>k[e.key]=0;
+
+onkeydown=e=>k[e.key]=1;
+onkeyup=e=>k[e.key]=0;
 
 function fighter(x,name,color){
-  return{x,y:ground,vy:0,hp:100,energy:0,
-    name,color,punch:false,ult:false,
-    onGround:true,dead:false,rot:0}
-}
+return{
+x,y:ground,vy:0,hp:100,energy:0,
+name,color,weapon:"fist",
+punch:false,ult:false,
+onGround:true,dead:false,rot:0
+}}
 
 let p1,p2,effects=[];
+
 const AI={
-  easy:{speed:2},
-  normal:{speed:3},
-  hard:{speed:4}
+easy:{speed:2,attack:0.03},
+normal:{speed:3,attack:0.08},
+hard:{speed:4,attack:0.15}
 };
 
 function cpuControl(cpu,pl){
-  const d=pl.x-cpu.x;
-  let L=0,R=0,P=1,U=0;
-  if(Math.abs(d)>45) d>0?R=1:L=1;
-  if(cpu.energy>=100) U=1;
-  update(cpu,pl,L,R,0,P,U,AI[aiLevel].speed);
+const a=AI[aiLevel];
+let L=0,R=0,P=0;
+const d=pl.x-cpu.x;
+if(Math.abs(d)>50) d>0?R=1:L=1;
+if(Math.random()<a.attack) P=1;
+update(cpu,pl,L,R,0,P,0,a.speed);
 }
 
 function update(p,e,L,R,J,P,U,s=3){
-  if(p.dead)return;
-  if(L)p.x-=s;if(R)p.x+=s;
-  p.x=Math.max(15,Math.min(345,p.x));
-  if(J&&p.onGround){p.vy=-12;p.onGround=false}
-  p.vy+=grav;p.y+=p.vy;
-  if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true}
+if(p.dead)return;
+if(L)p.x-=s;if(R)p.x+=s;
+p.x=Math.max(20,Math.min(340,p.x));
+p.vy+=grav;p.y+=p.vy;
+if(p.y>=ground){p.y=ground;p.vy=0}
 
-  if(P&&!p.punch){
-    p.punch=true;
-    if(Math.abs(p.x-e.x)<55){
-      e.hp=Math.max(0,e.hp-10);
-      p.energy=Math.min(100,p.energy+20);
-      effects.push({x:e.x,y:e.y-40,r:5,l:10,color:p.color});
-    }
-    setTimeout(()=>p.punch=false,200);
-  }
+if(k.g&&p===p1 || k["."]&&p===p2){
+p.weapon=p.weapon==="fist"?"sword":"fist"
+}
 
-  if(U&&p.energy>=100&&!p.ult){
-    p.energy=0;p.ult=true;
-    effects.push({type:"wave",x:p.x,y:p.y-40,dir:e.x>p.x?1:-1,l:40,color:p.color,own:p});
-    setTimeout(()=>p.ult=false,400);
-  }
+if(P&&!p.punch){
+p.punch=true;
+let dmg=p.weapon==="sword"?18:10;
+if(Math.abs(p.x-e.x)<55){
+e.hp=Math.max(0,e.hp-dmg);
+p.energy=Math.min(100,p.energy+15);
+for(let i=0;i<8;i++){
+effects.push({x:e.x,y:e.y-30,
+vx:(Math.random()-0.5)*4,
+vy:-Math.random()*4,l:20})
+}}
+setTimeout(()=>p.punch=false,250);
+}
 }
 
 function drawF(p){
-  ctx.save();ctx.translate(p.x,p.y-20);ctx.rotate(p.rot);
-  ctx.strokeStyle=p.color;ctx.lineWidth=4;
-  ctx.beginPath();ctx.arc(0,-30,10,0,7);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,5);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-20,-5);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(20,-5);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(-10,25);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(10,25);ctx.stroke();
-  ctx.restore();
+ctx.save();ctx.translate(p.x,p.y-20);ctx.rotate(p.rot);
+ctx.strokeStyle=p.color;ctx.lineWidth=4;
+ctx.beginPath();ctx.arc(0,-30,10,0,7);ctx.stroke();
+ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,10);ctx.stroke();
+ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-20,0);ctx.stroke();
+ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(20,0);ctx.stroke();
+if(p.weapon==="sword"){
+ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(40,-10);ctx.stroke();
+}
+ctx.restore();
 }
 
 function draw(){
-  ctx.clearRect(0,0,360,400);
-  ctx.fillStyle="red";
-  ctx.fillRect(10,10,p1.hp*1.2,8);
-  ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
-  ctx.fillStyle="cyan";
-  ctx.fillRect(10,22,p1.energy*1.2,6);
-  ctx.fillRect(360-10-p2.energy*1.2,22,p2.energy*1.2,6);
+ctx.clearRect(0,0,360,400);
+ctx.fillStyle="red";
+ctx.fillRect(10,10,p1.hp*1.2,8);
+ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
+ctx.fillStyle="cyan";
+ctx.fillRect(10,22,p1.energy*1.2,6);
+ctx.fillRect(360-10-p2.energy*1.2,22,p2.energy*1.2,6);
 
-  drawF(p1);drawF(p2);
+drawF(p1);drawF(p2);
 
-  effects.forEach(e=>{
-    if(e.type==="wave"){
-      ctx.fillStyle=e.color;
-      ctx.beginPath();ctx.arc(e.x,e.y,10,0,7);ctx.fill();
-      e.x+=e.dir*6;e.l--;
-      const t=e.own===p1?p2:p1;
-      if(Math.abs(e.x-t.x)<15){t.hp=Math.max(0,t.hp-30);e.l=0}
-    }else{
-      ctx.strokeStyle=e.color;
-      ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.stroke();
-      e.r+=2;e.l--;
-    }
-  });
-  effects=effects.filter(e=>e.l>0);
+effects.forEach(e=>{
+ctx.fillStyle="red";
+ctx.fillRect(e.x,e.y,3,3);
+e.x+=e.vx;e.y+=e.vy;e.vy+=0.3;e.l--;
+});
+effects=effects.filter(e=>e.l>0);
 }
 
 function loop(){
-  if(over)return;
-  if(gameMode==="cpu") cpuControl(p2,p1);
-  update(p1,p2,k.a||m1L,k.d||m1R,k.w||m1J,k.f||m1P,k.g);
-  if(gameMode==="pvp")
-    update(p2,p1,k.ArrowLeft||m2L,k.ArrowRight||m2R,k.ArrowUp||m2J,k['/']||m2P,k['.']);
+if(over)return;
+if(gameMode==="cpu") cpuControl(p2,p1);
+update(p1,p2,k.a,k.d,0,k.f,0);
+if(gameMode==="pvp")
+update(p2,p1,k.ArrowLeft,k.ArrowRight,0,k["/"],0);
 
-  if(p1.hp<=0)p1.dead=true;
-  if(p2.hp<=0)p2.dead=true;
-  if(p1.dead&&p1.rot>-Math.PI/2)p1.rot-=0.05;
-  if(p2.dead&&p2.rot< Math.PI/2)p2.rot+=0.05;
-
-  draw();
-  if(Math.abs(p1.rot)>=Math.PI/2||Math.abs(p2.rot)>=Math.PI/2){
-    over=true;game.style.display="none";end.style.display="flex";
-    win.innerText=(p1.hp<=0?p2.name:p1.name)+" 勝利";
-    return;
-  }
-  requestAnimationFrame(loop);
+draw();
+if(p1.hp<=0||p2.hp<=0){
+over=true;game.style.display="none";
+end.style.display="flex";
+win.innerText=(p1.hp<=0?p2.name:p1.name)+" 勝利";
+}
+requestAnimationFrame(loop);
 }
 
 function start(){
-  gameMode=document.querySelector('input[name="mode"]:checked').value;
-  aiLevel=difficulty.value;
-  p1=fighter(90,n1.value,c1.value);
-  p2=fighter(270,n2.value,c2.value);
-  menu.style.display="none";
-  game.style.display="block";
-  over=false;loop();
+gameMode=document.querySelector('[name=mode]:checked').value;
+aiLevel=difficulty.value;
+p1=fighter(90,n1.value,c1.value);
+p2=fighter(270,n2.value,c2.value);
+menu.style.display="none";
+game.style.display="block";
+over=false;loop();
 }
 function back(){
-  end.style.display="none";
-  game.style.display="none";
-  menu.style.display="flex";
+end.style.display="none";
+menu.style.display="flex";
 }
 </script>
 </body>
