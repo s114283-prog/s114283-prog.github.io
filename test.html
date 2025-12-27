@@ -15,20 +15,16 @@ body{
 #app{width:360px;text-align:center}
 canvas{background:#f5f5f5;border-radius:12px;margin:10px 0}
 button,select,input{padding:6px 10px;border-radius:10px;border:none}
-
 .menu,.end{display:flex;flex-direction:column;gap:10px;align-items:center}
-
-/* 鍵帽 icon */
-.keys{font-size:12px;margin-top:6px}
-.keycap{
+.key{
   display:inline-block;
-  padding:3px 6px;
-  margin:0 2px;
+  min-width:22px;
+  padding:2px 6px;
+  margin:2px;
   border-radius:6px;
   background:#222;
-  border:1px solid #555;
-  color:#fff;
-  font-weight:bold;
+  border:1px solid #666;
+  font-size:12px;
 }
 </style>
 </head>
@@ -43,7 +39,7 @@ button,select,input{padding:6px 10px;border-radius:10px;border:none}
 <label><input type="radio" name="mode" value="pvp"> 雙人對戰</label>
 
 <div>
-AI 難度
+AI 難度：
 <select id="difficulty">
 <option value="easy">簡單</option>
 <option value="normal" selected>普通</option>
@@ -59,21 +55,14 @@ AI 難度
 
 <canvas id="game" width="360" height="400" style="display:none"></canvas>
 
-<!-- 鍵帽提示 -->
-<div class="keys">
-P1：
-<span class="keycap">A</span>
-<span class="keycap">D</span>
-<span class="keycap">W</span>
-<span class="keycap">F</span>
-<span class="keycap">G</span>
+<div style="font-size:12px">
+💻 P1
+<span class="key">A</span><span class="key">D</span><span class="key">W</span>
+<span class="key">F</span><span class="key">G</span>
 ｜
-P2：
-<span class="keycap">←</span>
-<span class="keycap">→</span>
-<span class="keycap">↑</span>
-<span class="keycap">/</span>
-<span class="keycap">.</span>
+P2
+<span class="key">←</span><span class="key">→</span><span class="key">↑</span>
+<span class="key">/</span><span class="key">.</span>
 </div>
 
 <div id="end" class="end" style="display:none">
@@ -85,164 +74,164 @@ P2：
 </div>
 
 <script>
-const c=game,ctx=c.getContext("2d");
+const c=document.getElementById("game");
+const ctx=c.getContext("2d");
 const ground=300,grav=0.8;
-let k={},over=false,gameMode="cpu",aiLevel="normal";
 
-onkeydown=e=>k[e.key]=1;
-onkeyup=e=>k[e.key]=0;
+const keys={};
+window.addEventListener("keydown",e=>keys[e.key]=true);
+window.addEventListener("keyup",e=>keys[e.key]=false);
 
-/* 音效系統 */
-const AC=new (window.AudioContext||webkitAudioContext)();
-function beep(f,d=0.08){
-  const o=AC.createOscillator(),g=AC.createGain();
-  o.connect(g);g.connect(AC.destination);
+const AudioCtx=new (window.AudioContext||webkitAudioContext)();
+function beep(f){
+  const o=AudioCtx.createOscillator(),g=AudioCtx.createGain();
+  o.connect(g);g.connect(AudioCtx.destination);
   o.frequency.value=f;g.gain.value=0.15;
-  o.start();o.stop(AC.currentTime+d);
+  o.start();o.stop(AudioCtx.currentTime+0.08);
 }
 
 function fighter(x,name,color){
-return{
-  x,y:ground,vy:0,
-  hp:100,name,color,
-  weapon:"fist",
-  punch:false,
-  onGround:true
-}}
+  return{
+    x,y:ground,vy:0,
+    hp:100,weapon:"fist",
+    name,color,
+    punch:false,onGround:true,
+    leg:0,dead:false
+  }
+}
 
-let p1,p2,effects=[];
+let p1,p2,effects=[],over=false,mode="cpu",aiLv="normal";
 
 const AI={
-easy:{speed:2,attack:0.04},
-normal:{speed:3,attack:0.08},
-hard:{speed:4,attack:0.14}
+  easy:{speed:2,rate:0.03},
+  normal:{speed:3,rate:0.08},
+  hard:{speed:4,rate:0.15}
 };
 
-function cpuControl(cpu,pl){
-const a=AI[aiLevel];
-let L=0,R=0,P=0;
-const d=pl.x-cpu.x;
-if(Math.abs(d)>50) d>0?R=1:L=1;
-if(Math.random()<a.attack) P=1;
-update(cpu,pl,L,R,0,P,a.speed);
-}
-
-function update(p,e,L,R,J,P,s=3){
-if(L)p.x-=s;if(R)p.x+=s;
-p.x=Math.max(20,Math.min(340,p.x));
-
-if(J&&p.onGround){
-  p.vy=-12;p.onGround=false;
-  beep(400); // 跳躍音
-}
-p.vy+=grav;p.y+=p.vy;
-if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true}
-
-/* 換武器 */
-if((p===p1&&k.g)||(p===p2&&k["."])){
-  if(!p.switch){
-    p.weapon=p.weapon==="fist"?"sword":"fist";
-    beep(120); // 切換音
-    p.switch=true;
+function attack(p,e){
+  if(p.punch||p.dead)return;
+  p.punch=true;beep(200);
+  const range=p.weapon==="sword"?65:45;
+  const dmg=p.weapon==="sword"?18:10;
+  if(Math.abs(p.x-e.x)<range){
+    e.hp=Math.max(0,e.hp-dmg);
+    for(let i=0;i<8;i++){
+      effects.push({
+        x:e.x,y:e.y-30,
+        vx:(Math.random()-0.5)*4,
+        vy:-Math.random()*4,l:20
+      });
+    }
   }
-}else p.switch=false;
-
-/* 攻擊 */
-if(P&&!p.punch){
-p.punch=true;
-beep(p.weapon==="sword"?180:260);
-let range=p.weapon==="sword"?70:45;
-let dmg=p.weapon==="sword"?18:10;
-
-if(Math.abs(p.x-e.x)<range){
-  e.hp=Math.max(0,e.hp-dmg);
-  beep(80); // 命中
-  for(let i=0;i<6;i++)
-    effects.push({
-      x:e.x,y:e.y-30,
-      vx:(Math.random()-0.5)*3,
-      vy:-Math.random()*3,l:18
-    });
+  setTimeout(()=>p.punch=false,220);
 }
-setTimeout(()=>p.punch=false,200);
+
+function update(p,e,L,R,J,P){
+  if(p.dead)return;
+  if(L)p.x-=3;
+  if(R)p.x+=3;
+  p.x=Math.max(20,Math.min(340,p.x));
+
+  if(J&&p.onGround){p.vy=-12;p.onGround=false}
+  p.vy+=grav;p.y+=p.vy;
+  if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true}
+
+  p.leg+=Math.abs(p.vy)<1&&(L||R)?0.2:0;
+
+  if(P)attack(p,e);
 }
+
+function cpu(cpu,pl){
+  const a=AI[aiLv];
+  let L=0,R=0,P=0;
+  const d=pl.x-cpu.x;
+  if(Math.abs(d)>50)d>0?R=1:L=1;
+  if(Math.random()<a.rate)P=1;
+  update(cpu,pl,L,R,0,P);
 }
 
 function drawF(p){
-ctx.save();
-ctx.translate(p.x,p.y-20);
-ctx.strokeStyle=p.color;
-ctx.lineWidth=4;
+  ctx.save();
+  ctx.translate(p.x,p.y-20);
+  ctx.strokeStyle=p.color;ctx.lineWidth=4;
 
-/* 頭 */
-ctx.beginPath();ctx.arc(0,-30,10,0,7);ctx.stroke();
-/* 身 */
-ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,10);ctx.stroke();
-/* 手 */
-ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-20,0);ctx.stroke();
-ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(20,0);ctx.stroke();
-/* 劍 */
-if(p.weapon==="sword"){
-ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(45,-10);ctx.stroke();
-}
-/* 腳 */
-ctx.beginPath();
-ctx.moveTo(0,10);ctx.lineTo(-10,30);
-ctx.moveTo(0,10);ctx.lineTo(10,30);
-ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-30,10,0,7);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,10);ctx.stroke();
 
-ctx.restore();
+  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-20,-5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(20,-5);ctx.stroke();
+
+  if(p.weapon==="sword"){
+    ctx.beginPath();ctx.moveTo(20,-5);ctx.lineTo(45,-10);ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(0,10);
+  ctx.lineTo(-10,25+Math.sin(p.leg)*5);
+  ctx.moveTo(0,10);
+  ctx.lineTo(10,25-Math.sin(p.leg)*5);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 function draw(){
-ctx.clearRect(0,0,360,400);
+  ctx.clearRect(0,0,360,400);
 
-/* 血量 */
-ctx.fillStyle="red";
-ctx.fillRect(10,10,p1.hp*1.2,8);
-ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
+  ctx.fillStyle="red";
+  ctx.fillRect(10,10,p1.hp*1.2,8);
+  ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
 
-drawF(p1);drawF(p2);
+  drawF(p1);drawF(p2);
 
-/* 血粒子 */
-effects.forEach(e=>{
-ctx.fillStyle="red";
-ctx.fillRect(e.x,e.y,3,3);
-e.x+=e.vx;e.y+=e.vy;e.vy+=0.3;e.l--;
-});
-effects=effects.filter(e=>e.l>0);
+  effects.forEach(e=>{
+    ctx.fillStyle="red";
+    ctx.fillRect(e.x,e.y,3,3);
+    e.x+=e.vx;e.y+=e.vy;e.vy+=0.3;e.l--;
+  });
+  effects=effects.filter(e=>e.l>0);
 }
 
 function loop(){
-if(over)return;
-if(gameMode==="cpu") cpuControl(p2,p1);
-update(p1,p2,k.a,k.d,k.w,k.f,3);
-if(gameMode==="pvp")
-update(p2,p1,k.ArrowLeft,k.ArrowRight,k.ArrowUp,k["/"],3);
+  if(over)return;
+  if(mode==="cpu")cpu(p2,p1);
 
-draw();
-if(p1.hp<=0||p2.hp<=0){
-over=true;game.style.display="none";
-end.style.display="flex";
-win.innerText=(p1.hp<=0?p2.name:p1.name)+" 勝利";
-}
-requestAnimationFrame(loop);
+  update(p1,p2,keys.a,keys.d,keys.w,keys.f);
+  if(keys.g&&p1.onGround){p1.weapon=p1.weapon==="fist"?"sword":"fist";beep(120)}
+
+  if(mode==="pvp"){
+    update(p2,p1,keys.ArrowLeft,keys.ArrowRight,keys.ArrowUp,keys["/"]);
+    if(keys["."]&&p2.onGround){p2.weapon=p2.weapon==="fist"?"sword":"fist";beep(120)}
+  }
+
+  draw();
+
+  if(p1.hp<=0||p2.hp<=0){
+    over=true;
+    game.style.display="none";
+    end.style.display="flex";
+    win.innerText=(p1.hp<=0?p2.name:p1.name)+" 勝利";
+  }
+  requestAnimationFrame(loop);
 }
 
 function start(){
-gameMode=document.querySelector('[name=mode]:checked').value;
-aiLevel=difficulty.value;
-p1=fighter(90,n1.value,c1.value);
-p2=fighter(270,n2.value,c2.value);
-menu.style.display="none";
-game.style.display="block";
-over=false;loop();
+  mode=document.querySelector("[name=mode]:checked").value;
+  aiLv=difficulty.value;
+  p1=fighter(90,n1.value,c1.value);
+  p2=fighter(270,n2.value,c2.value);
+  menu.style.display="none";
+  game.style.display="block";
+  over=false;
+  loop();
 }
+
 function back(){
-end.style.display="none";
-menu.style.display="flex";
+  end.style.display="none";
+  menu.style.display="flex";
 }
 </script>
 </body>
 </html>
+
 
