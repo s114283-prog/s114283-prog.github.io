@@ -3,15 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>火柴人對決</title>
-<link rel="icon" type="image/png" href="images.jpg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
 <style>
 html,body{margin:0;width:100%;height:100%}
-body{
-  display:flex;justify-content:center;align-items:center;
-  background:#111;color:#fff;font-family:system-ui
-}
+body{display:flex;justify-content:center;align-items:center;background:#111;color:#fff;font-family:system-ui}
 #app{width:360px;text-align:center}
 canvas{background:#f5f5f5;border-radius:12px;margin:10px 0}
 button,select,input{padding:6px 10px;border-radius:10px;border:none}
@@ -21,16 +16,13 @@ button,select,input{padding:6px 10px;border-radius:10px;border:none}
 .key{border:1px solid #555;padding:2px 6px;border-radius:6px}
 </style>
 </head>
-
 <body>
 <div id="app">
 
 <div id="menu" class="menu">
   <h2>火柴人對決</h2>
-
   <label><input type="radio" name="mode" value="cpu" checked> 單人（打電腦）</label>
   <label><input type="radio" name="mode" value="pvp"> 雙人對戰</label>
-
   <div>
     AI 難度：
     <select id="difficulty">
@@ -39,10 +31,8 @@ button,select,input{padding:6px 10px;border-radius:10px;border:none}
       <option value="hard">困難</option>
     </select>
   </div>
-
   <div>玩家1 <input id="n1" value="玩家1"> <input type="color" id="c1" value="#000000"></div>
   <div>玩家2 <input id="n2" value="玩家2"> <input type="color" id="c2" value="#ff0000"></div>
-
   <button onclick="start()">開始遊戲</button>
 </div>
 
@@ -77,19 +67,18 @@ button,select,input{padding:6px 10px;border-radius:10px;border:none}
 </div>
 
 <script>
-const c=game,ctx=c.getContext("2d");
+const c=document.getElementById("game"),ctx=c.getContext("2d");
 const ground=300,grav=0.8;
 let k={},over=false,gameMode="cpu",aiLevel="normal";
 let m1L=0,m1R=0,m1J=0,m1P=0,m2L=0,m2R=0,m2J=0,m2P=0;
 window.onkeydown=e=>k[e.key]=1;
 window.onkeyup=e=>k[e.key]=0;
 
-// 音效
 const AudioCtx=new(window.AudioContext||webkitAudioContext)();
 function sound(f){const o=AudioCtx.createOscillator(),g=AudioCtx.createGain();o.connect(g);g.connect(AudioCtx.destination);o.frequency.value=f;g.gain.value=0.15;o.start();o.stop(AudioCtx.currentTime+0.08);}
 
 function fighter(x,name,color){
-  return {x,y:ground,vy:0,hp:100,energy:0,name,color,punch:false,ult:false,onGround:true,dead:false,rot:0,walkPhase:0};
+  return {x:x,y:ground,vy:0,hp:100,energy:0,name,color,punch:false,ult:false,onGround:true,dead:false,rot:0,walkPhase:0};
 }
 
 let p1,p2,effects=[];
@@ -114,7 +103,6 @@ function update(p,e,L,R,J,P,U,s=3){
   p.vy+=grav;p.y+=p.vy;
   if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true;}
 
-  // ===== 攻擊判定 + 噴血 =====
   if(P&&!p.punch){
     p.punch=true; sound(200);
     if(Math.abs(p.x-e.x)<55){
@@ -122,36 +110,15 @@ function update(p,e,L,R,J,P,U,s=3){
       p.energy=Math.min(100,p.energy+20);
       // 噴血粒子
       for(let i=0;i<8;i++){
-        effects.push({
-          x:e.x,
-          y:e.y-30,
-          vx:(Math.random()-0.5)*4,
-          vy:-Math.random()*3,
-          l:20,
-          color:"red",
-          r:3
-        });
+        effects.push({x:e.x,y:e.y-30,vx:(Math.random()-0.5)*4,vy:-Math.random()*3,l:20,color:"red",r:3});
       }
     }
     setTimeout(()=>p.punch=false,200);
   }
 
-  // 大招
   if(U&&p.energy>=100&&!p.ult){
     p.energy=0; p.ult=true; sound(80);
     effects.push({type:"wave",x:p.x,y:p.y-40,dir:e.x>p.x?1:-1,l:40,own:p});
-    // 大招命中噴血
-    for(let i=0;i<12;i++){
-      effects.push({
-        x:e.x,
-        y:e.y-30,
-        vx:(Math.random()-0.5)*5,
-        vy:-Math.random()*4,
-        l:25,
-        color:"red",
-        r:4
-      });
-    }
     setTimeout(()=>p.ult=false,400);
   }
 }
@@ -159,38 +126,32 @@ function update(p,e,L,R,J,P,U,s=3){
 function drawF(p){
   ctx.save(); ctx.translate(p.x,p.y-20); ctx.rotate(p.rot);
   ctx.strokeStyle=p.color; ctx.lineWidth=4;
-
+  let leg=Math.sin(p.walkPhase)*5;
   ctx.beginPath(); ctx.arc(0,-30,10,0,7); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(0,5); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(-20+Math.sin(p.walkPhase)*5,-5); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(20+Math.sin(p.walkPhase)*5,-5); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,5); ctx.lineTo(-10+Math.sin(p.walkPhase)*5,25); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,5); ctx.lineTo(10+Math.sin(p.walkPhase)*5,25); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(-20,-5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(20,-5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,5); ctx.lineTo(-10,25+leg); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,5); ctx.lineTo(10,25-leg); ctx.stroke();
   ctx.restore();
 }
 
 function draw(){
   ctx.clearRect(0,0,360,400);
-  ctx.fillStyle="red";
-  ctx.fillRect(10,10,p1.hp*1.2,8);
-  ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
-  ctx.fillStyle="cyan";
-  ctx.fillRect(10,22,p1.energy*1.2,6);
-  ctx.fillRect(360-10-p2.energy*1.2,22,p2.energy*1.2,6);
+  ctx.fillStyle="red"; ctx.fillRect(10,10,p1.hp*1.2,8); ctx.fillRect(360-10-p2.hp*1.2,10,p2.hp*1.2,8);
+  ctx.fillStyle="cyan"; ctx.fillRect(10,22,p1.energy*1.2,6); ctx.fillRect(360-10-p2.energy*1.2,22,p2.energy*1.2,6);
 
   drawF(p1); drawF(p2);
 
   effects.forEach(e=>{
     if(e.type==="wave"){
-      ctx.fillStyle="cyan";
-      ctx.beginPath(); ctx.arc(e.x,e.y,10,0,7); ctx.fill();
+      ctx.fillStyle="cyan"; ctx.beginPath(); ctx.arc(e.x,e.y,10,0,7); ctx.fill();
       e.x+=e.dir*6; e.l--;
       const t=e.own===p1?p2:p1;
       if(Math.abs(e.x-t.x)<15){t.hp=Math.max(0,t.hp-30); e.l=0; sound(400);}
     }else{
-      ctx.fillStyle=e.color||"orange";
-      ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();
-      e.x+=e.vx;e.y+=e.vy;e.vy+=0.3;e.l--;
+      ctx.fillStyle=e.color||"orange"; ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,7); ctx.fill();
+      e.x+=e.vx; e.y+=e.vy; e.vy+=0.3; e.l--;
     }
   });
   effects=effects.filter(e=>e.l>0);
@@ -199,7 +160,6 @@ function draw(){
 function loop(){
   if(over) return;
   if(gameMode==="cpu") cpuControl(p2,p1);
-
   update(p1,p2,k.a||m1L,k.d||m1R,k.w||m1J,k.f||m1P,k.g);
   if(gameMode==="pvp") update(p2,p1,k.ArrowLeft||m2L,k.ArrowRight||m2R,k.ArrowUp||m2J,k['/']||m2P,k['.']);
 
@@ -237,4 +197,3 @@ function back(){
 </script>
 </body>
 </html>
-
