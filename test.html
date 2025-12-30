@@ -112,6 +112,8 @@ function update(p,e,L,R,J,P,U,s=3){
       for(let i=0;i<8;i++){
         effects.push({x:e.x,y:e.y-30,vx:(Math.random()-0.5)*4,vy:-Math.random()*3,l:20,color:"red",r:3});
       }
+      // 擊退效果
+      e.x += (e.x>p.x?1:-1)*12; 
     }
     setTimeout(()=>p.punch=false,200);
   }
