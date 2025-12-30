@@ -114,37 +114,44 @@ function update(p,e,L,R,J,P,U,s=3){
   p.vy+=grav;p.y+=p.vy;
   if(p.y>=ground){p.y=ground;p.vy=0;p.onGround=true;}
 
- if(P&&!p.punch){
+  // ===== 攻擊判定 + 噴血 =====
+  if(P&&!p.punch){
     p.punch=true; sound(200);
     if(Math.abs(p.x-e.x)<55){
       e.hp=Math.max(0,e.hp-10); sound(400);
       p.energy=Math.min(100,p.energy+20);
-
-      // ===== 在這裡加噴血 =====
-      for(let i=0; i<8; i++){
-          effects.push({
-              x: e.x,
-              y: e.y-30,
-              vx: (Math.random()-0.5)*4,
-              vy: -Math.random()*3,
-              l: 20,
-              color: "red",
-              r: 3
-          });
+      // 噴血粒子
+      for(let i=0;i<8;i++){
+        effects.push({
+          x:e.x,
+          y:e.y-30,
+          vx:(Math.random()-0.5)*4,
+          vy:-Math.random()*3,
+          l:20,
+          color:"red",
+          r:3
+        });
       }
-      // =======================
-    }
-    setTimeout(()=>p.punch=false,200);
-}
-
-      effects.push({x:e.x,y:e.y-40,r:5,l:10,color:p.color});
     }
     setTimeout(()=>p.punch=false,200);
   }
 
+  // 大招
   if(U&&p.energy>=100&&!p.ult){
     p.energy=0; p.ult=true; sound(80);
     effects.push({type:"wave",x:p.x,y:p.y-40,dir:e.x>p.x?1:-1,l:40,own:p});
+    // 大招命中噴血
+    for(let i=0;i<12;i++){
+      effects.push({
+        x:e.x,
+        y:e.y-30,
+        vx:(Math.random()-0.5)*5,
+        vy:-Math.random()*4,
+        l:25,
+        color:"red",
+        r:4
+      });
+    }
     setTimeout(()=>p.ult=false,400);
   }
 }
@@ -153,14 +160,10 @@ function drawF(p){
   ctx.save(); ctx.translate(p.x,p.y-20); ctx.rotate(p.rot);
   ctx.strokeStyle=p.color; ctx.lineWidth=4;
 
-  // 頭
   ctx.beginPath(); ctx.arc(0,-30,10,0,7); ctx.stroke();
-  // 身體
   ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(0,5); ctx.stroke();
-  // 手
   ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(-20+Math.sin(p.walkPhase)*5,-5); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(20+Math.sin(p.walkPhase)*5,-5); ctx.stroke();
-  // 腿
   ctx.beginPath(); ctx.moveTo(0,5); ctx.lineTo(-10+Math.sin(p.walkPhase)*5,25); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0,5); ctx.lineTo(10+Math.sin(p.walkPhase)*5,25); ctx.stroke();
   ctx.restore();
@@ -185,9 +188,9 @@ function draw(){
       const t=e.own===p1?p2:p1;
       if(Math.abs(e.x-t.x)<15){t.hp=Math.max(0,t.hp-30); e.l=0; sound(400);}
     }else{
-      ctx.strokeStyle=e.color||"orange";
-      ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,7); ctx.stroke();
-      e.r+=2; e.l--;
+      ctx.fillStyle=e.color||"orange";
+      ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,7);ctx.fill();
+      e.x+=e.vx;e.y+=e.vy;e.vy+=0.3;e.l--;
     }
   });
   effects=effects.filter(e=>e.l>0);
@@ -200,7 +203,6 @@ function loop(){
   update(p1,p2,k.a||m1L,k.d||m1R,k.w||m1J,k.f||m1P,k.g);
   if(gameMode==="pvp") update(p2,p1,k.ArrowLeft||m2L,k.ArrowRight||m2R,k.ArrowUp||m2J,k['/']||m2P,k['.']);
 
-  // 死亡判定
   if(p1.hp<=0) p1.dead=true;
   if(p2.hp<=0) p2.dead=true;
   if(p1.dead && p1.rot>-Math.PI/2) p1.rot-=0.05;
@@ -235,3 +237,4 @@ function back(){
 </script>
 </body>
 </html>
+
